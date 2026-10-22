@@ -43,6 +43,8 @@ jobs:
               echo "::error::$dist: i18n-ai --version printed '$got', expected '$EXPECTED'"; exit 1
             fi
             /tmp/smoke/bin/i18n-ai --help > /dev/null
+            # The precheck runs no model: it must work from the installed package alone.
+            /tmp/smoke/bin/i18n-ai scan examples/i18next/locales/en -t fr,ar > /dev/null
             echo "ok $dist: $got"
           done
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -1,0 +1,81 @@
+from mediary.cqrs import QueryHandler, query_handler
+
+from ......domain.exports.locale import extract_schema, qualify, reusable_translations
+from .....common.targets import validated_targets
+from .....ports.locale import ILocaleStore, ILocaleTreeScanner
+from .query import ScanLocaleTreeQuery
+from .view import ScanReport, SourceFileView, TargetFileView, TargetView
+
+
+@query_handler
+class ScanLocaleTreeQueryHandler(QueryHandler[ScanLocaleTreeQuery, ScanReport]):
+    """Scan the tree, qualify its source files, and count what each target needs. The existing
+    target files are read to tell their good translations, which are kept, from the rest."""
+
+    def __init__(self, scanner: ILocaleTreeScanner, store: ILocaleStore) -> None:
+        self._scanner = scanner
+        self._store = store
+
+    async def handle(self, query: ScanLocaleTreeQuery) -> ScanReport:
+        # 1. The tree, and the targets it can take
+        tree = await self._scanner.scan(query.tree)
+        targets = validated_targets(tree, query.targets)
+
+        # 2. Which source files qualify
+        files: list[SourceFileView] = []
+        qualified = []
+        for file in tree.files:
+            qualification = qualify(file.document, file.error)
+            files.append(
+                SourceFileView(
+                    name=str(file.name),
+                    path=file.path,
+                    qualifies=qualification.qualifies,
+                    reason=qualification.reason,
+                    messages=qualification.messages,
+                )
+            )
+            if qualification.qualifies:
+                qualified.append(file)
+
+        # 3. What each target needs, file by file
+        views: list[TargetView] = []
+        for target in targets:
+            target_files: list[TargetFileView] = []
+            for file in qualified:
+                assert file.document is not None
+                location = tree.target_location(target, file)
+                existing = await self._store.read(location)
+                schema = extract_schema(file.document, tree.source, target)
+                reusable = len(reusable_translations(schema, existing))
+                target_files.append(
+                    TargetFileView(
+                        file=str(file.name),
+                        path=location.path,
+                        bundle_key=location.bundle_key,
+                        exists=existing is not None,
+                        to_translate=len(schema.units) - reusable,
+                        reusable=reusable,
+                    )
+                )
+            views.append(
+                TargetView(
+                    locale=target.value,
+                    name=target.display_name,
+                    direction=target.direction,
+                    exists=tree.has(target),
+                    files=tuple(target_files),
+                )
+            )
+
+        return ScanReport(
+            root=tree.root,
+            layout=tree.layout.value,
+            source=tree.source.value,
+            source_name=tree.source.display_name,
+            source_path=tree.source_path,
+            output=tree.output,
+            existing=tuple(locale.value for locale in tree.existing),
+            files=tuple(files),
+            targets=tuple(views),
+        )

@@ -1,0 +1,10 @@
+{
+  "app": {
+    "title": "Tableau de bord Acme",
+    "welcome": "Bon retour, {{nom}} !"
+  },
+  "nav": {
+    "home": "Accueil",
+    "settings": "Paramètres"
+  }
+}

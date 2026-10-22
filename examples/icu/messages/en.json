@@ -1,0 +1,14 @@
+{
+  "Inbox": {
+    "title": "Inbox",
+    "unread": "You have {count, plural, =0 {no unread messages} one {# unread message} other {# unread messages}}.",
+    "from": "From {sender} on {date, date, medium}",
+    "storage": "{used, number, percent} of your storage is used.",
+    "invite": "{gender, select, female {She invited you} male {He invited you} other {They invited you}} to <link>{team}</link>.",
+    "place": "You finished {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}!"
+  },
+  "Errors": {
+    "notFound": "We couldn't find that page.",
+    "retry": "Something went wrong. Please try again in {seconds} seconds."
+  }
+}
