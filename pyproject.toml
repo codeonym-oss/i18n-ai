@@ -54,7 +54,7 @@ Changelog = "https://github.com/codeonym-oss/i18n-ai/blob/main/CHANGELOG.md"
 i18n-ai = "i18n_ai.cli.app:main"
 
 [build-system]
-requires = ["uv_build>=0.8.22,<0.13"]
+requires = ["uv_build>=0.8.22,<0.14"]
 build-backend = "uv_build"
 
 [dependency-groups]
