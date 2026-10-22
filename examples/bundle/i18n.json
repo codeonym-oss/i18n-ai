@@ -1,0 +1,10 @@
+{
+  "en": {
+    "greeting": "Hello, %{name}!",
+    "files": "%d files selected",
+    "help": "Need help? Contact %(email)s."
+  },
+  "es": {
+    "greeting": "¡Hola, %{name}!"
+  }
+}

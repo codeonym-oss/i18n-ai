@@ -1,0 +1,13 @@
+{
+  "title": "Sign in to your account",
+  "email": "E-mail address",
+  "password": "Password",
+  "forgot": "Forgot your password?",
+  "submit": "Sign in",
+  "errors": {
+    "invalid": "The e-mail or password is incorrect.",
+    "locked": "Your account is locked for {{minutes}} minutes after {{attempts}} failed attempts.",
+    "attempts_one": "You have {{count}} attempt left.",
+    "attempts_other": "You have {{count}} attempts left."
+  }
+}
