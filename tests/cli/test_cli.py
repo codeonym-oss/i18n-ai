@@ -2,6 +2,7 @@
 provider's, and nothing reaches a network or installs a package."""
 
 import json
+import re
 import sys
 from importlib.metadata import version
 from pathlib import Path
@@ -14,6 +15,8 @@ from i18n_ai.di import bootstrap
 from support.fakes import FakeGateway, FakeModel
 
 runner = CliRunner()
+# Typer forces colors on CI (GITHUB_ACTIONS, FORCE_COLOR): the tests read the text alone.
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +43,7 @@ def gateway(monkeypatch: pytest.MonkeyPatch) -> FakeGateway:
 
 def invoke(*args: str, answers: str | None = None) -> tuple[int, str]:
     result = runner.invoke(app, list(args), input=answers)
-    return result.exit_code, result.output
+    return result.exit_code, ANSI.sub("", result.output)
 
 
 def test_version() -> None:
