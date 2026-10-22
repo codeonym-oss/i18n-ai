@@ -1,0 +1,181 @@
+[project]
+name = "i18n-ai"
+version = "0.0.0"
+description = "Generate a website's locales from its source locale tree, with LLM agents that keep every placeholder intact."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "codeonym-oss" }]
+requires-python = ">=3.12"
+dependencies = [
+    # The CLI, and its tables and progress bars.
+    "typer>=0.15",
+    "rich>=13.9",
+    # CQRS: every intent goes through the mediator; dishka resolves the handlers' ports.
+    "mediary[dishka]>=0.4.0",
+    "dishka>=1.6",
+    # The agents. A provider's integration (langchain-openai, ...) is installed on demand.
+    "langchain>=1.0",
+    "langchain-core>=1.0",
+    "langgraph>=1.0",
+    "pydantic>=2.11",
+    # CLDR: locale names, and the plural categories each language needs.
+    "babel>=2.16",
+    # Provider credentials (OPENAI_API_KEY, ...) and i18n-ai's own settings from a .env.
+    "python-dotenv>=1.1",
+]
+keywords = [
+    "i18n", "l10n", "localization", "translation", "locales", "i18next", "icu", "messageformat",
+    "llm", "langchain", "langgraph", "cli",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Internationalization",
+    "Topic :: Software Development :: Localization",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/codeonym-oss/i18n-ai"
+Documentation = "https://docs.codeonym.work/projects/i18n-ai/"
+Repository = "https://github.com/codeonym-oss/i18n-ai"
+Issues = "https://github.com/codeonym-oss/i18n-ai/issues"
+Changelog = "https://github.com/codeonym-oss/i18n-ai/blob/main/CHANGELOG.md"
+
+[project.scripts]
+i18n-ai = "i18n_ai.cli.app:main"
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.13"]
+build-backend = "uv_build"
+
+[dependency-groups]
+test = [
+    "pytest>=9",
+    "pytest-asyncio>=1.2",
+    "pytest-cov>=7",
+]
+dev = [
+    {include-group = "test"},
+    {include-group = "docs"},
+    "commitizen>=4.8",
+    "import-linter>=2.3",
+    "mypy>=1.18",
+    "pre-commit>=4.3",
+    "ruff>=0.15",
+]
+# The docs site (see CONTRIBUTING.md). Sphinx 9 needs Python 3.12+.
+docs = [
+    "myst-parser>=5.1",
+    "shibuya>=2026.7",
+    "sphinx>=9.1",
+    "sphinx-autobuild>=2025.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "UP", "SIM", "RUF", "C4", "PT", "PIE", "RET",
+    "TC", "ASYNC", "PERF", "N",
+]
+ignore = [
+    "N818",                          # exceptions are named for what happened (TargetIsSource), no Error suffix
+    "RUF001", "RUF002", "RUF003",    # the output and the prompts deliberately use →, ×, ’ and friends
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer reads the command signatures' annotations at runtime, so their imports must stay real.
+"src/i18n_ai/cli/**" = ["TC"]
+# mediary and dishka read handler and provider signatures at runtime.
+"src/i18n_ai/application/**" = ["TC"]
+"src/i18n_ai/di/**" = ["TC"]
+# LangGraph reads its state types at runtime.
+"src/i18n_ai/infra/adapters/langgraph/**" = ["TC"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Typer declares its options as defaults.
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
+[tool.commitizen]
+# Only used to validate messages (commit-msg hook + CI); versions and changelog are release-please's job.
+name = "cz_conventional_commits"
+allowed_prefixes = ["Merge", "Revert", "fixup!", "squash!"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+explicit_package_bases = true
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src/i18n_ai"]
+
+[[tool.mypy.overrides]]
+# It ships no type information.
+module = ["babel.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = ["--strict-markers", "--strict-config", "-ra", "--cov", "--cov-report=term-missing"]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+xfail_strict = true
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["i18n_ai"]
+branch = true
+# `python -m i18n_ai` only calls main(), which the tests run.
+omit = ["*/i18n_ai/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "@overload", "raise NotImplementedError", "\\.\\.\\."]
+
+# The hexagon, checked by `lint-imports` (pre-commit and CI): each layer imports only the layers
+# below it, and the domain and the application know nothing of the libraries the adapters wrap.
+[tool.importlinter]
+root_package = "i18n_ai"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+id = "layers"
+name = "Each layer imports only the layers below it"
+type = "layers"
+layers = [
+    "i18n_ai.cli",
+    "i18n_ai.di",
+    "i18n_ai.infra | i18n_ai.runtime",
+    "i18n_ai.application",
+    "i18n_ai.domain",
+]
+
+[[tool.importlinter.contracts]]
+id = "pure-core"
+name = "The domain and the application stay free of I/O libraries"
+type = "forbidden"
+source_modules = ["i18n_ai.domain", "i18n_ai.application"]
+forbidden_modules = ["langchain", "langchain_core", "langgraph", "typer", "rich", "dishka", "dotenv"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+id = "no-shortcuts"
+name = "The CLI reaches the adapters only through the container"
+type = "forbidden"
+source_modules = ["i18n_ai.cli"]
+forbidden_modules = ["i18n_ai.infra"]
+allow_indirect_imports = true

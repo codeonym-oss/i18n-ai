@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in i18n-ai doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is public. Leave out API keys, and replace your website's messages with
+        made-up ones that still show the problem.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Command
+      description: The `i18n-ai` command you ran, with its options and the model.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: messages
+    attributes:
+      label: Source messages
+      description: The smallest source file, or the messages, that show the problem.
+      render: json
+  - type: textarea
+    id: output
+    attributes:
+      label: Output or traceback
+      description: Rerunning with `i18n-ai -vv …` shows every step, which often helps.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: i18n-ai version
+      placeholder: i18n-ai --version
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and Python version
+      placeholder: Ubuntu 24.04, Python 3.12.4
+    validations:
+      required: true
