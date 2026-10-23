@@ -91,7 +91,10 @@ def test_scan_tells_the_format(examples: Path) -> None:
 
     code, output = invoke("scan", str(examples / "i18next/locales/en"))
     assert code == 2
-    assert "mixes the formats json, yaml; choose the one to translate with --format" in output
+    # the temporary directory's long path may wrap the line
+    assert "mixes the formats json, yaml; choose the one to translate with --format" in " ".join(
+        output.split()
+    )
 
     code, output = invoke("scan", str(examples / "i18next/locales/en"), "--format", "YAML")
     assert code == 0, output
