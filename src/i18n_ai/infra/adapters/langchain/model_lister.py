@@ -11,8 +11,8 @@ from typing import Any, Literal
 
 import httpx
 
-from ....application.ports.provider import IModelLister, ModelInfo, ModelListing
-from .credentials import KEYS, key_of
+from ....application.ports.provider import ICredentialStore, IModelLister, ModelInfo, ModelListing
+from .credentials import KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,10 @@ _APIS: dict[str, _Api] = {
 class HttpModelLister(IModelLister):
     """`transport` replaces the network, in tests."""
 
-    def __init__(self, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self, credentials: ICredentialStore, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
+        self._credentials = credentials
         self._transport = transport
 
     async def models(self, provider: str) -> ModelListing:
@@ -124,7 +127,8 @@ class HttpModelLister(IModelLister):
         api = _APIS.get(provider)
         if api is None:
             return _fallback(recommended, f"{provider} has no model list to read")
-        key = key_of(provider)
+        found = self._credentials.find(KEYS[provider]) if provider in KEYS else None
+        key = found.value if found else None
         if api.keyed and key is None:
             return _fallback(recommended, f"{KEYS[provider]} is not set")
 

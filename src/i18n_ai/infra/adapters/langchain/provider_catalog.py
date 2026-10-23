@@ -8,9 +8,9 @@ import warnings
 from collections.abc import Callable
 from typing import Any
 
-from ....application.ports.provider import IProviderCatalog, ProviderInfo
+from ....application.ports.provider import ICredentialStore, IProviderCatalog, ProviderInfo
 from ....domain.exports.provider import ModelSpec, ProviderUnknown, ResolvedModel
-from .credentials import KEYS, key_of
+from .credentials import KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,8 @@ _FALLBACK = {
 
 
 class LangChainProviderCatalog(IProviderCatalog):
-    def __init__(self) -> None:
+    def __init__(self, credentials: ICredentialStore) -> None:
+        self._credentials = credentials
         self._modules, self._infer = _langchain_table()
 
     def providers(self) -> list[ProviderInfo]:
@@ -58,13 +59,15 @@ class LangChainProviderCatalog(IProviderCatalog):
         if module is None:
             raise ProviderUnknown(name, sorted(self._modules))
         root = module.split(".", 1)[0]
+        variable = KEYS.get(key)
+        found = self._credentials.find(variable) if variable else None
         return ProviderInfo(
             name=key,
             package=root.replace("_", "-"),
             module=root,
             installed=self.is_installed(root),
-            key=KEYS.get(key),
-            key_set=key_of(key) is not None,
+            key=variable,
+            key_source=found.source if found else None,
         )
 
     def resolve(self, spec: ModelSpec) -> ResolvedModel:

@@ -26,7 +26,8 @@ The tests never reach a model or install a package: `tests/support/fakes.py` hol
 gateway that "translates" by tagging each message with its locale, keeping its placeholders, and
 can be told to break a message first or refuse a file. `FakeModel` puts it in the dishka
 container in place of the provider's, with a model list that needs no network. The interactive
-mode's questions are answered by `ScriptedPrompter`, which also records what was asked.
+mode's questions are answered by `ScriptedPrompter`, which also records what was asked. Every test
+runs with `MemoryKeyring` as the system keyring, so none reads or writes yours.
 
 `examples/` holds a locale tree of each layout. Tests copy it to a temporary directory before
 writing into it; run the CLI on a copy too.

@@ -11,7 +11,12 @@ from mediary import Mediator
 from rich.console import Console
 
 from ...application.exports.locale import DetectLocaleTreesQuery, ListLocalesQuery
-from ...application.exports.provider import ListModelsQuery, ListProvidersQuery, ProviderView
+from ...application.exports.provider import (
+    ListModelsQuery,
+    ListProvidersQuery,
+    ProviderView,
+    SetProviderKeyCommand,
+)
 from ...domain.exports.locale import LocaleCode
 from ...runtime.answers import Answers, save_answers
 from .prompter import Choice, Prompter
@@ -111,7 +116,7 @@ class Wizard:
         name = await self._ask.select("Which provider?", choices, last_provider or None)
         provider = next(provider for provider in providers if provider.name == name)
         if provider.key and not provider.key_set:
-            await self.key(provider.key)
+            await self.key(provider.name, provider.key)
 
         listing = await self._mediator.send(ListModelsQuery(provider.name))
         if listing.problem:
@@ -129,18 +134,28 @@ class Wizard:
             model = await self._ask.text(f"The {provider.name} model's name")
         return f"{provider.name}:{model}"
 
-    async def key(self, variable: str) -> None:
-        """The provider's key, for this run only: it is set in the environment, not saved. Asked
-        once per run."""
+    async def key(self, provider: str, variable: str) -> None:
+        """The provider's key, used for this run, and saved in the system keyring only when the
+        person says so. Asked once per run."""
         if variable in self._keys:
             return
         self._keys.add(variable)
         self.asked = True
-        value = await self._ask.secret(f"{variable} (hidden; used for this run only)")
-        if value:
-            os.environ[variable] = value
-        else:
+        value = await self._ask.secret(f"{variable} (hidden)")
+        if not value:
             self._console.print(f"[yellow]No {variable}: the provider may refuse the calls.[/]")
+            return
+        save = await self._ask.confirm("Save it in the system keyring for the next runs?", False)
+        receipt = await self._mediator.send(SetProviderKeyCommand(provider, value, save))
+        if receipt.saved:
+            self._console.print(
+                f"[green]✓[/] {variable} saved in the system keyring; "
+                f"`i18n-ai auth logout {provider}` removes it."
+            )
+        elif receipt.problem:
+            self._console.print(
+                f"[yellow]{receipt.problem}: {variable} is used for this run only.[/]"
+            )
 
     async def confirm(self, question: str) -> bool:
         return await self._ask.confirm(question, default=True)

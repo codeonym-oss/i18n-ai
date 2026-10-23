@@ -8,6 +8,7 @@ from rich.logging import RichHandler
 from ..di.messaging.mediator import LOGGER as MEDIATOR_LOGGER
 from . import interactive
 from .common.runner import errors
+from .handlers.auth import auth
 from .handlers.generate import generate
 from .handlers.providers import providers
 from .handlers.scan import scan
@@ -23,6 +24,7 @@ app = typer.Typer(
 app.command("scan")(scan)
 app.command("generate")(generate)
 app.add_typer(providers, name="providers")
+app.add_typer(auth, name="auth")
 
 
 def _version(value: bool) -> None:

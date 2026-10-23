@@ -1,13 +1,16 @@
 """What stands in for the model: a gateway that 'translates' by tagging each message with the
 target, keeping its placeholders, and can be told to break some messages first; a model list
 that needs no network; and a dishka provider that puts them in the container, with every
-provider installed and no progress bar. And a terminal: a prompter that answers from a script."""
+provider installed and no progress bar. A keyring in memory. And a terminal: a prompter that
+answers from a script."""
 
 import re
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field
 
 from dishka import Provider, Scope, provide
+from keyring.backend import KeyringBackend
+from keyring.errors import PasswordDeleteError
 
 from i18n_ai.application.ports.locale import ITranslationEngine
 from i18n_ai.application.ports.progress import IGenerationProgress
@@ -73,6 +76,26 @@ class FakeModelLister(IModelLister):
             return ModelListing(models, live=True)
         recommended = (ModelInfo(f"{provider}-pick", rank=0),)
         return ModelListing(recommended, live=False, problem="FAKE_API_KEY is not set")
+
+
+class MemoryKeyring(KeyringBackend):
+    """The system keyring, in memory: (service, user) -> password."""
+
+    priority = 1  # type: ignore[assignment]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.passwords: dict[tuple[str, str], str] = {}
+
+    def get_password(self, service: str, username: str) -> str | None:
+        return self.passwords.get((service, username))
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        self.passwords[(service, username)] = password
+
+    def delete_password(self, service: str, username: str) -> None:
+        if self.passwords.pop((service, username), None) is None:
+            raise PasswordDeleteError(username)
 
 
 class SilentProgress(IGenerationProgress):

@@ -1,7 +1,6 @@
-"""The environment variable each provider's LangChain integration reads its API key from. The
-providers missing here take no key (ollama), or several settings (bedrock, vertex, azure)."""
-
-import os
+"""The environment variable each provider's LangChain integration reads its API key from, which
+also names the key in the system keyring. The providers missing here take no key (ollama), or
+several settings (bedrock, vertex)."""
 
 KEYS = {
     "anthropic": "ANTHROPIC_API_KEY",
@@ -23,9 +22,3 @@ KEYS = {
     "upstage": "UPSTAGE_API_KEY",
     "xai": "XAI_API_KEY",
 }
-
-
-def key_of(provider: str) -> str | None:
-    """The provider's API key, when its variable is set."""
-    variable = KEYS.get(provider)
-    return (os.environ.get(variable) or None) if variable else None

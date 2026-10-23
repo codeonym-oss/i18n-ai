@@ -19,5 +19,5 @@ class GetProviderStatusQueryHandler(QueryHandler[GetProviderStatusQuery, Provide
             package=model.package,
             installed=self._providers.is_installed(model.module),
             key=provider.key,
-            key_set=provider.key_set,
+            key_source=provider.key_source,
         )

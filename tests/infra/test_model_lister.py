@@ -1,4 +1,5 @@
-"""The providers' model lists, read through a transport that answers as each API would."""
+"""The providers' model lists, read through a transport that answers as each API would, with
+the keys from the environment or the keyring."""
 
 import asyncio
 from collections.abc import Callable
@@ -7,7 +8,9 @@ import httpx
 import pytest
 
 from i18n_ai.application.ports.provider import ModelListing
+from i18n_ai.infra.adapters.keyring import SERVICE, KeyringCredentialStore
 from i18n_ai.infra.adapters.langchain import HttpModelLister
+from support.fakes import MemoryKeyring
 
 Handler = Callable[[httpx.Request], httpx.Response]
 
@@ -20,7 +23,7 @@ def keys(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def listing(provider: str, handler: Handler) -> ModelListing:
-    lister = HttpModelLister(httpx.MockTransport(handler))
+    lister = HttpModelLister(KeyringCredentialStore(), httpx.MockTransport(handler))
     return asyncio.run(lister.models(provider))
 
 
@@ -107,6 +110,19 @@ def test_without_a_key_the_recommended_stand_in(monkeypatch: pytest.MonkeyPatch)
     assert not models.live
     assert models.problem == "OPENAI_API_KEY is not set"
     assert ids(models)[0] == "gpt-5-mini"
+
+
+def test_a_key_in_the_keyring_is_used(
+    monkeypatch: pytest.MonkeyPatch, vault: MemoryKeyring
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY")
+    vault.set_password(SERVICE, "OPENAI_API_KEY", "key-from-keyring")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["Authorization"] == "Bearer key-from-keyring"
+        return httpx.Response(200, json={"data": [{"id": "gpt-5"}]})
+
+    assert ids(listing("openai", handler)) == ["gpt-5"]
 
 
 @pytest.mark.parametrize(

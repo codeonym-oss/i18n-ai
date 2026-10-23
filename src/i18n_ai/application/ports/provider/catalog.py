@@ -2,20 +2,25 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from ....domain.exports.provider import ModelSpec, ResolvedModel
+from .credentials import KeySource
 
 
 @dataclass(frozen=True)
 class ProviderInfo:
     """A provider LangChain integrates, whether its package is installed, and the environment
-    variable holding its API key (None when it takes no key, or several settings), and whether
-    that is set."""
+    variable holding its API key (None when it takes no key, or several settings), and where
+    that key was found, if it was."""
 
     name: str
     package: str
     module: str
     installed: bool
     key: str | None = None
-    key_set: bool = False
+    key_source: KeySource | None = None
+
+    @property
+    def key_set(self) -> bool:
+        return self.key_source is not None
 
 
 class IProviderCatalog(ABC):

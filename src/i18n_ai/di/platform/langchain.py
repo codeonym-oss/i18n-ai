@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, provide
 
 from ...application.ports.locale import ITranslationEngine
-from ...application.ports.provider import IModelLister, IProviderCatalog
+from ...application.ports.provider import ICredentialStore, IModelLister, IProviderCatalog
 from ...infra.adapters.langchain import (
     HttpModelLister,
     LangChainChatModels,
@@ -20,8 +20,8 @@ class LangChainProvider(Provider):
     chat_models = provide(LangChainChatModels)
 
     @provide
-    def models(self) -> IModelLister:
-        return HttpModelLister()
+    def models(self, credentials: ICredentialStore) -> IModelLister:
+        return HttpModelLister(credentials)
 
     @provide
     def engine(self, chat_models: LangChainChatModels) -> ITranslationEngine:

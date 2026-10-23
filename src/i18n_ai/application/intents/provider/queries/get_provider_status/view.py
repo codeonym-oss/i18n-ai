@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from .....ports.provider import KeySource
+
 
 @dataclass(frozen=True)
 class ProviderStatusView:
@@ -8,4 +10,8 @@ class ProviderStatusView:
     package: str
     installed: bool
     key: str | None
-    key_set: bool
+    key_source: KeySource | None
+
+    @property
+    def key_set(self) -> bool:
+        return self.key_source is not None

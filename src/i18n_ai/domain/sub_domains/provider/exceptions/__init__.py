@@ -1,3 +1,3 @@
-from .provider import ProviderNotInstalled, ProviderUnknown
+from .provider import ProviderNotInstalled, ProviderTakesNoKey, ProviderUnknown
 
-__all__ = ["ProviderNotInstalled", "ProviderUnknown"]
+__all__ = ["ProviderNotInstalled", "ProviderTakesNoKey", "ProviderUnknown"]

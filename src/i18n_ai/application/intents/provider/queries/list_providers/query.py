@@ -9,4 +9,4 @@ from .view import ProviderView
 @dataclass(frozen=True)
 class ListProvidersQuery(Query[tuple[ProviderView, ...]]):
     """Every provider LangChain integrates, by name, whether its package is installed, and its
-    API key's variable and whether it is set."""
+    API key's variable and where that key was found."""

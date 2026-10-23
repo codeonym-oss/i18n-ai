@@ -38,7 +38,13 @@ uv tool install i18n-ai          # or: pipx install i18n-ai
 
 The provider's credentials come from its usual environment variables (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `OLLAMA_HOST`, …), which a `.env` in the working directory
-can hold.
+can hold, or from the system keyring, once for every project:
+
+```sh
+i18n-ai auth login openai        # asked for, hidden; kept in the Keychain / Credential Manager / Secret Service
+i18n-ai auth status              # which providers have a key, and where it comes from; never the key
+i18n-ai auth logout openai       # or --all
+```
 
 ## Usage
 
