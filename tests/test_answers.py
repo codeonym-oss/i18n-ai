@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -24,7 +25,9 @@ def test_unreadable_answers_are_ignored(tmp_path: Path, state: Path) -> None:
     (state / "answers.json").write_text('["not", "a", "map"]')
     assert load_answers(tmp_path) == Answers()
 
-    (state / "answers.json").write_text(f'{{"{tmp_path.resolve()}": {{"tree": "a", "x": 2}}}}')
+    (state / "answers.json").write_text(
+        json.dumps({str(tmp_path.resolve()): {"tree": "a", "x": 2}})
+    )
     assert load_answers(tmp_path) == Answers(tree="a")
 
 
