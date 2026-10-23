@@ -1,0 +1,43 @@
+# French translations of the shop.
+# Copyright (C) 2026 Acme
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: shop 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-01 12:00+0000\n"
+"PO-Revision-Date: 2026-10-02 09:30+0000\n"
+"Last-Translator: Camille <camille@example.com>\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: shop/templates/shop/base.html:12
+msgid "Welcome to our shop"
+msgstr "Bienvenue dans notre boutique"
+
+#. Translators: the button that adds a product to the cart
+#: shop/templates/shop/product.html:40
+msgid "Add"
+msgstr ""
+
+#: shop/views.py:58
+#, python-format
+msgid "Hello %(name)s, you have %(count)d new message."
+msgid_plural "Hello %(name)s, you have %(count)d new messages."
+msgstr[0] ""
+msgstr[1] ""
+
+#: shop/templates/shop/menu.html:8
+msgctxt "month name"
+msgid "May"
+msgstr ""
+
+#: shop/views.py:72
+#, fuzzy, python-brace-format
+#| msgid "Your order {number} has shipped"
+msgid "Your order {number} has shipped."
+msgstr "Votre commande {number} est expédiée"

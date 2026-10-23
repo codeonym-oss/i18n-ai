@@ -90,7 +90,13 @@ def test_i18n_ai_alone_walks_every_step(
         ("confirm", "Translate 2 file(s) into fr, de (4 agent(s), 47 message(s))?"),
     ]
     trees, targets, _, providers, _, save, models, _ = prompter.asked
-    assert trees.choices[:3] == ["bundle/i18n.json", "i18next/locales", "icu/messages"]
+    assert trees.choices[:5] == [
+        "bundle/i18n.json",
+        "django/locale",
+        "gnu/po",
+        "i18next/locales",
+        "icu/messages",
+    ]
     assert targets.default == {"fr"}  # in the tree already
     assert "en" not in targets.choices
     assert providers.choices[0] == "anthropic"  # installed, in the tests

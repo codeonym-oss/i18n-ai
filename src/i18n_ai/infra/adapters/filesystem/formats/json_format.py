@@ -51,7 +51,7 @@ class JsonFormat(FileFormat):
     extensions = (".json",)
     label = "JSON"
 
-    def read(self, path: Path) -> Any:
+    def read(self, path: Path, source: bool = False) -> Any:
         content, _ = read_json(path)
         return content
 

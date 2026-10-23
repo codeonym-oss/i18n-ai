@@ -53,10 +53,13 @@ their order and the file's style are kept.
 | JSON | `.json` | i18next, next-intl, vue-i18n, ngx-translate, FormatJS |
 | YAML | `.yml`, `.yaml` | Rails, vue-i18n, Symfony, Hugo |
 | ARB | `.arb` | Flutter (`gen-l10n`, `intl`) |
+| gettext PO | `.po`, `.pot` | Django, WordPress, Babel, GNU projects |
 
 The format is told by the extension. A tree keeps to one: when the source mixes them
 (`en/app.json` beside `en/mail.yml`), `scan` and `generate` refuse it, and `--format` names the
 one to translate, the other files being left alone.
+
+### YAML
 
 A file whose only key is its locale holds its messages under it, as Rails writes them:
 
@@ -68,6 +71,8 @@ en:
 
 Its targets are rooted at their own locale (`fr:` in `fr.yml`).
 
+### ARB
+
 An ARB file's messages are ICU MessageFormat, checked as such. Its `@@` entries describe the file
 and its `@key` entries describe a message for `gen-l10n`; neither is translated. A message's
 `description` is given to the model beside it, so that a short label (`Save`, `Post`) is
@@ -75,6 +80,29 @@ translated in the sense its author meant. A target gets the
 source's `@@` entries, with `@@locale` set to its own locale, and no `@key` entry from the
 source, since `gen-l10n` reads them from the template only. The ones a target already has are
 kept. A new ARB locale is spelled with underscores, as Flutter's file names are: `app_pt_BR.arb`.
+
+### gettext
+
+A catalog's messages are its entries, each keyed by its `msgid` (and its `msgctxt`). The source
+text is the `msgid`, so a gettext tree needs no source locale. Its template is:
+
+- its `.pot` (`po/notes.pot` beside `fr.po`, or Babel's `locale/messages.pot` beside
+  `fr/LC_MESSAGES/messages.po`); point at the `.pot`, or at its directory;
+- else, in a directory per locale, each catalog's latest version among the locales: Django's
+  `locale/fr/LC_MESSAGES/django.po` is the template of `locale/ar/LC_MESSAGES/django.po`.
+
+A target is the template with its `msgstr` filled. Its comments, references (`#:`), flags and
+order are kept, and its header gets its `Language`, `Language-Team` and `Last-Translator`
+(`i18n-ai`). An existing catalog keeps its header and its translations, and gets the template's
+new entries; a fuzzy entry is translated again. Catalogs are named as their siblings are
+(`plugin-fr_FR.po` beside `plugin.pot`), a new locale with underscores (`pt_BR`).
+
+A plural entry gets the target's forms. An existing catalog keeps its own `Plural-Forms`: which
+CLDR category each `msgstr[n]` is for is read from it, so an old Russian catalog keeps its three
+forms. A new catalog gets CLDR's rule, written as gettext's `Plural-Forms`.
+
+The extracted comments (`#.`) and the context (`msgctxt`) are given to the model as the
+message's note.
 
 ## The source locale
 

@@ -6,10 +6,11 @@ from .....domain.exports.locale import LocaleDocument, LocaleFormat
 from .arb_format import ArbFormat
 from .base import FileFormat
 from .json_format import JsonFormat
+from .po_format import PoFormat
 from .yaml_format import YamlFormat
 
 FORMATS: dict[LocaleFormat, FileFormat] = {
-    adapter.format: adapter for adapter in (JsonFormat(), YamlFormat(), ArbFormat())
+    adapter.format: adapter for adapter in (JsonFormat(), YamlFormat(), ArbFormat(), PoFormat())
 }
 
 
@@ -25,10 +26,13 @@ def extensions(only: LocaleFormat | None = None) -> tuple[str, ...]:
     return tuple(extension for adapter in adapters for extension in adapter.extensions)
 
 
-def load_document(path: Path, adapter: FileFormat) -> tuple[LocaleDocument | None, str | None]:
-    """The locale document in `path`, or None and why it is not one."""
+def load_document(
+    path: Path, adapter: FileFormat, source: bool = False
+) -> tuple[LocaleDocument | None, str | None]:
+    """The locale document in `path`, read as a source's when `source`, or None and why it is
+    not one."""
     try:
-        content = adapter.read(path)
+        content = adapter.read(path, source)
     except (OSError, ValueError) as error:
         return None, f"not valid {adapter.label}: {error}"
     if not isinstance(content, dict):

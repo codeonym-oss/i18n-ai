@@ -55,7 +55,10 @@ class LocaleTree:
     @property
     def source_path(self) -> Path:
         if self.layout == TreeLayout.DIRECTORY:
-            return self.root / self.source.value
+            directory = self.root / self.source.value
+            if self.files and not self.files[0].path.is_relative_to(directory):
+                return self.files[0].path  # a template, as gettext's `messages.pot`
+            return directory
         if self.layout == TreeLayout.FILE:
             return self.files[0].path if self.files else self.root / f"{self.prefix}{self.source}"
         return self.root
@@ -69,7 +72,8 @@ class LocaleTree:
         if self.layout == TreeLayout.DIRECTORY:
             return TargetLocation(self.output / name / Path(file.name), key, name)
         if self.layout == TreeLayout.FILE:
-            path = self.output / f"{self.prefix}{name}{file.path.suffix}"
+            suffix = self.format.target_suffix(file.path.suffix)
+            path = self.output / f"{self.prefix}{name}{suffix}"
             return TargetLocation(path, key, name)
         output = self.output if self.output.suffix else self.output / self.root.name
         return TargetLocation(output, bundle_key=name, locale=name)

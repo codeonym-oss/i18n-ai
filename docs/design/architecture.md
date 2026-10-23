@@ -45,7 +45,7 @@ src/i18n_ai/
 │   ├── intents/       locale: ScanLocaleTreeQuery, GenerateLocalesCommand
 │   │                  provider: ListProvidersQuery, GetProviderStatusQuery, InstallProviderCommand
 │   └── exports/
-├── infra/adapters/    filesystem (scanner, store, formats: JSON, YAML, ARB) · langchain (catalog, chat
+├── infra/adapters/    filesystem (scanner, store, formats: JSON, YAML, ARB, PO) · langchain (catalog, chat
 │                      models) · langgraph (run graph, atom, gateway, prompts) · packages (uv /
 │                      pip) · console (progress) · keyring
 ├── di/                platform providers · messaging (mediator, scanned) · container · bootstrap

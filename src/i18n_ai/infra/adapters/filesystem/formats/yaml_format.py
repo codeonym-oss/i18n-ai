@@ -29,7 +29,7 @@ class YamlFormat(FileFormat):
     extensions = (".yml", ".yaml")
     label = "YAML"
 
-    def read(self, path: Path) -> Any:
+    def read(self, path: Path, source: bool = False) -> Any:
         text, _ = read_text(path)
         try:
             return _plain(YAML(typ="safe").load(text))

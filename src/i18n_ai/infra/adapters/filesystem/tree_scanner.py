@@ -10,11 +10,15 @@
 Its files are in one of the `formats`, the one asked or the only one there. A file whose only
 key is its locale, as Rails writes `en.yml`, holds its messages under that key.
 
+A gettext tree may hold no source locale, its source text being each entry's `msgid`: its
+template is then its `.pot` (`messages.pot`, `po/app.pot`), or else each catalog's latest version
+among the locales (Django's `locale/fr/LC_MESSAGES/django.po`), read for its `msgid`.
+
 `detect` looks for those trees under a project, for the user to pick one."""
 
 import fnmatch
 import re
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
 
@@ -31,7 +35,7 @@ from ....domain.exports.locale import (
     SourceLocaleUnknown,
     TreeLayout,
 )
-from .formats import FileFormat, extensions, format_of, load_document
+from .formats import FORMATS, FileFormat, extensions, format_of, load_document
 
 _SKIPPED = {"node_modules", "__pycache__", "dist", "build"}
 # Where a locale file's name prefix ends: `app_`, `messages-`, `strings.`
@@ -50,7 +54,7 @@ _DETECTED_THREE_LETTERS = {"ast", "chr", "ckb", "fil", "gsw", "haw", "kab", "yue
 # A lone locale is taken for a tree only in a directory named like one, or when it is English.
 _TREE_NAMES = {
     "i18n", "intl", "l10n", "lang", "langs", "language", "languages", "locale", "locales",
-    "messages", "translations", "translation",
+    "messages", "translations", "translation", "po",
 }  # fmt: skip
 
 
@@ -101,6 +105,8 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
         if adapter is None or (request.format is not None and adapter.format != request.format):
             wanted = ", ".join(extensions(request.format))
             raise LocaleTreeNotFound(str(path), f"it is not a locale file ({wanted})")
+        if path.suffix.lower() == ".pot":
+            return self._from_directory(path.parent, request, template=path)
         named = _named(path.stem, request.source)
         if named is not None:
             return self._file_layout(path.parent, path, named[1], request)
@@ -147,15 +153,95 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             prefix=prefix,
         )
 
+    # A gettext tree without its source locale
+
+    def _gettext_directories(
+        self,
+        root: Path,
+        directories: dict[str, Path],
+        templates: list[Path],
+        source: LocaleCode,
+        request: TreeRequest,
+    ) -> LocaleTree | None:
+        """Locale directories of catalogs: each catalog's template is its `.pot` in `root`, or
+        else its latest version among the locales."""
+        locales = _locales(directories)
+        latest: dict[PurePosixPath, Path] = {}
+        for locale in locales:
+            directory = directories[locale.value]
+            for file in sorted(directory.rglob("*.po")):
+                name = PurePosixPath(file.relative_to(directory).as_posix())
+                if name not in latest or file.stat().st_mtime > latest[name].stat().st_mtime:
+                    latest[name] = file
+        for template in templates:
+            # Babel's `messages.pot` is `fr/LC_MESSAGES/messages.po`
+            name = next(
+                (name for name in latest if name.stem == template.stem),
+                PurePosixPath(f"{template.stem}.po"),
+            )
+            latest[name] = template
+        if not latest:
+            return None
+        adapter = FORMATS[LocaleFormat.PO]
+        files = tuple(
+            _source_file(name, latest[name], adapter, source)
+            for name in sorted(latest)
+            if _selected(str(name), request.include, request.exclude)
+        )
+        return LocaleTree(
+            root=root,
+            layout=TreeLayout.DIRECTORY,
+            source=source,
+            files=files,
+            existing=locales,
+            output=_output(request, root),
+            format=LocaleFormat.PO,
+        )
+
+    def _gettext_files(
+        self, root: Path, template: Path, source: LocaleCode, request: TreeRequest
+    ) -> LocaleTree:
+        """A template beside its catalogs, named as most of them are: `fr.po` (GNU), or
+        `plugin-fr_FR.po` (WordPress)."""
+        named = [
+            found
+            for child in root.glob("*.po")
+            if child.is_file() and (found := _named(child.stem, None)) is not None
+        ]
+        prefixes = Counter(prefix for prefix, _ in named)
+        prefix = prefixes.most_common(1)[0][0] if prefixes else ""
+        return LocaleTree(
+            root=root,
+            layout=TreeLayout.FILE,
+            source=source,
+            files=(
+                _source_file(
+                    PurePosixPath(template.name), template, FORMATS[LocaleFormat.PO], source
+                ),
+            ),
+            existing=tuple(sorted({locale for found, locale in named if found == prefix}, key=str)),
+            output=_output(request, root),
+            format=LocaleFormat.PO,
+            prefix=prefix,
+        )
+
     # The path is a directory: a locale's, or the one holding the locales
 
-    def _from_directory(self, path: Path, request: TreeRequest) -> LocaleTree:
+    def _from_directory(
+        self, path: Path, request: TreeRequest, template: Path | None = None
+    ) -> LocaleTree:
         locale = _locale_of(path.name, request.source)
-        if locale is not None:
+        if locale is not None and template is None:
             return self._directory_layout(path.parent, path, locale, request)
 
         directories = {child.name: child for child in path.iterdir() if child.is_dir()}
         locale_directories = _locales(directories)
+        templates = [template] if template else _templates(path, request)
+        wanted = request.source or _DEFAULT_SOURCE
+        if locale_directories and not _has(locale_directories, wanted):
+            tree = self._gettext_directories(path, directories, templates, wanted, request)
+            if tree is not None:
+                return tree
         if locale_directories:
             source = _choose_source(str(path), locale_directories, request.source)
             return self._directory_layout(path, directories[source.value], source, request)
@@ -169,6 +255,8 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
                 by_locale.setdefault(named[1].value, child)  # unprefixed first: `en` < `app_en`
         _one_format(path, list(by_locale.values()))
         locale_files = _locales(by_locale)
+        if templates and not _has(locale_files, wanted):
+            return self._gettext_files(path, templates[0], wanted, request)
         if locale_files:
             source = _choose_source(str(path), locale_files, request.source)
             return self._file_layout(path, by_locale[source.value], source, request)
@@ -211,11 +299,22 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
         )
 
 
+def _templates(path: Path, request: TreeRequest) -> list[Path]:
+    """The gettext templates in `path`, when its gettext files are asked for or no format is."""
+    if request.format not in (None, LocaleFormat.PO):
+        return []
+    return sorted(child for child in path.glob("*.pot") if child.is_file())
+
+
+def _has(locales: Iterable[LocaleCode], wanted: LocaleCode) -> bool:
+    return any(locale.same_as(wanted) for locale in locales)
+
+
 def _source_file(
     name: PurePosixPath, path: Path, adapter: FileFormat, source: LocaleCode
 ) -> SourceFile:
     """A source file, its messages under its locale's key when that is its only key."""
-    document, error = load_document(path, adapter)
+    document, error = load_document(path, adapter, source=True)
     if document is not None and len(document.content) == 1:
         [(key, content)] = document.content.items()
         locale = LocaleCode.recognized(key)

@@ -10,7 +10,7 @@ i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clin
 ```
 
 - **Any tree**: a directory per locale, a file per locale, or one bundle of them all, in JSON,
-  YAML (its comments kept) or Flutter's ARB.
+  YAML (its comments kept), Flutter's ARB or gettext PO.
 - **A precheck first**: the tree, which files qualify, and what each target needs, shown before
   anything is sent to a model.
 - **Parallel agents**: LangGraph runs one agent per file and target locale.
