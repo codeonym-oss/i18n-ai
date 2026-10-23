@@ -338,10 +338,10 @@ def test_laravel_s_syntax_stays_in_its_own_locales(
     examples: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     project = examples / "laravel"
-    (project / "lang/de.json").write_text('{"Welcome, :name!": "Willkommen!"}')
+    (project / "lang/de.json").write_text('{"Welcome, :name!": "Willkommen!"}', encoding="utf-8")
     (project / "resources/js/locales").mkdir(parents=True)
-    (project / "resources/js/locales/en.json").write_text('{"m": "Ratio :name"}')
-    (project / "resources/js/locales/de.json").write_text('{"m": "Verhältnis"}')
+    (project / "resources/js/locales/en.json").write_text('{"m": "Ratio :name"}', encoding="utf-8")
+    (project / "resources/js/locales/de.json").write_text('{"m": "Verhältnis"}', encoding="utf-8")
     monkeypatch.chdir(project)
 
     code, output = invoke("scan", "lang", "-t", "de")
