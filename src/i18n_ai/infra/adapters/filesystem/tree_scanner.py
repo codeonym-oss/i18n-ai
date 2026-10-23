@@ -16,8 +16,13 @@ among the locales (Django's `locale/fr/LC_MESSAGES/django.po`), read for its `ms
 XLIFF tree, its template a file with no locale in its name (Angular's `messages.xlf`, whose
 translations are `messages.fr.xlf`).
 
+A Laravel tree is its `lang/<lng>.json` files, its directories (`en/*.php`, `vendor/`) left
+alone. Its keys are the source text: without the source's own file, the keys of every locale
+file are the source.
+
 `detect` looks for those trees under a project, for the user to pick one."""
 
+import dataclasses
 import fnmatch
 import re
 from collections import Counter, deque
@@ -32,6 +37,7 @@ from ....domain.exports.locale import (
     LocaleFormat,
     LocaleTree,
     LocaleTreeNotFound,
+    MessageSyntax,
     MixedLocaleFormats,
     SourceFile,
     SourceLocaleUnknown,
@@ -65,9 +71,13 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
         path = request.path.expanduser().resolve()
         if not path.exists():
             raise LocaleTreeNotFound(str(path), "it does not exist")
-        if path.is_file():
-            return self._from_file(path, request)
-        return self._from_directory(path, request)
+        if request.syntax == MessageSyntax.LARAVEL:
+            tree = self._laravel(path.parent if path.is_file() else path, request)
+        elif path.is_file():
+            tree = self._from_file(path, request)
+        else:
+            tree = self._from_directory(path, request)
+        return dataclasses.replace(tree, syntax=request.syntax)
 
     async def detect(self, root: Path) -> list[TreeCandidate]:
         return self._detect(root)
@@ -159,6 +169,40 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             format=adapter.format,
             prefix=prefix,
             left_alone=left_alone,
+        )
+
+    # A Laravel tree
+
+    def _laravel(self, root: Path, request: TreeRequest) -> LocaleTree:
+        """The source's `<lng>.json`, else the keys of every locale file, in the order they first
+        appear, each key's text the key itself."""
+        files = [
+            child
+            for child in sorted(root.glob("*.json"))
+            if child.is_file() and _locale_of(child.stem, request.source) is not None
+        ]
+        source = request.source or _DEFAULT_SOURCE
+        own = next((file for file in files if LocaleCode(file.stem).same_as(source)), None)
+        if own is not None:
+            return self._file_layout(root, own, LocaleCode(own.stem), request)
+        if not files:
+            raise LocaleTreeNotFound(str(root), "it holds no locale file (fr.json)")
+        keys: dict[str, str] = {}
+        for file in files:
+            document, _ = load_document(file, FORMATS[LocaleFormat.JSON])
+            for key, value in document.content.items() if document is not None else ():
+                if isinstance(value, str):
+                    keys.setdefault(key, key)
+        name = PurePosixPath(f"{source.value}.json")
+        return LocaleTree(
+            root=root,
+            layout=TreeLayout.FILE,
+            source=source,
+            files=(SourceFile(name, files[0], LocaleDocument(keys)),),
+            existing=_locales(file.stem for file in files),
+            output=_output(request, root),
+            format=LocaleFormat.JSON,
+            source_from=tuple(file.name for file in files),
         )
 
     # A gettext tree without its source locale

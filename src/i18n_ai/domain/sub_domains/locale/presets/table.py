@@ -3,13 +3,24 @@ vue-i18n too): the first row it reveals whose locales are found wins, so the mor
 rows come first."""
 
 from ..placeholders import PlaceholderStyle as Style
-from ..vo import LocaleFormat
+from ..vo import LocaleFormat, MessageSyntax
 from .preset import ConfigHint, Preset
 
 # A quoted path in JavaScript, TypeScript or JSON: 'locales', "./locales/", `locales`
 _QUOTED = r"""['"`]\.?/?([^'"`]+?)/?['"`]"""
 
 PRESETS: tuple[Preset, ...] = (
+    # Before the frontend libraries an Inertia app also depends on, whose usual places hold `lang`
+    Preset(
+        name="laravel",
+        library="Laravel",
+        example="lang/<lng>.json",
+        packages=("laravel/framework",),
+        trees=("lang", "resources/lang"),
+        format=LocaleFormat.JSON,
+        placeholders=(Style.LARAVEL,),
+        syntax=MessageSyntax.LARAVEL,
+    ),
     Preset(
         name="nuxt-i18n",
         library="Nuxt i18n",

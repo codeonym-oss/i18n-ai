@@ -2,7 +2,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-from ....domain.exports.locale import LocaleCode, LocaleFormat, LocaleTree, TreeLayout
+from ....domain.exports.locale import (
+    LocaleCode,
+    LocaleFormat,
+    LocaleTree,
+    MessageSyntax,
+    TreeLayout,
+)
 
 
 @dataclass(frozen=True)
@@ -12,7 +18,8 @@ class TreeRequest:
     named when the tree cannot tell it. `include` and `exclude` are globs over the source's
     file names. `format` reads only that format's files; otherwise a tree must keep to one,
     unless it mixes the `preferred` format with others: its files alone are then read, and the
-    tree says which formats are left alone."""
+    tree says which formats are left alone. `syntax` is the messages', which the preset of the
+    library whose locales these are says."""
 
     path: Path
     source: LocaleCode | None = None
@@ -21,6 +28,7 @@ class TreeRequest:
     exclude: tuple[str, ...] = ()
     format: LocaleFormat | None = None
     preferred: LocaleFormat | None = None
+    syntax: MessageSyntax = MessageSyntax.STANDARD
 
 
 @dataclass(frozen=True)

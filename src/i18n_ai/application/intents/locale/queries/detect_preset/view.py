@@ -5,7 +5,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class PresetView:
     """A preset: its library, what reveals it, where its locales usually are, their format
-    (None when the library takes several), and the placeholders its messages use."""
+    (None when the library takes several), the placeholders its messages use, and their syntax."""
 
     name: str
     library: str
@@ -13,6 +13,7 @@ class PresetView:
     detected_from: tuple[str, ...]
     format: str | None
     placeholders: tuple[str, ...]
+    syntax: str
 
 
 @dataclass(frozen=True)

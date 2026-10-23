@@ -15,6 +15,7 @@ class PlaceholderStyle(StrEnum):
     NESTING = "nesting"  # i18next: $t(key)
     LINKED = "linked"  # vue-i18n: @:key, @.lower:key
     TAGS = "tags"  # html and react-i18next's <Trans>: <b>, </b>, <0/>, <br/>
+    LARAVEL = "laravel"  # laravel, in its own locales only: :name, :Name, :NAME
 
 
 DOUBLE_BRACES = re.compile(r"\{\{-?\s*([^{}]*?)\s*\}\}")

@@ -80,4 +80,5 @@ class ScanLocaleTreeQueryHandler(QueryHandler[ScanLocaleTreeQuery, ScanReport]):
             files=tuple(files),
             targets=tuple(views),
             left_alone=tuple(format.value for format in tree.left_alone),
+            source_from=tree.source_from,
         )

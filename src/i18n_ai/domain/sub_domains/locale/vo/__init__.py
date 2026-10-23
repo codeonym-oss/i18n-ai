@@ -3,6 +3,7 @@ from .format import LocaleFormat
 from .key_path import KeyPath, Segment
 from .layout import TreeLayout
 from .locale_code import CARDINAL, ORDINAL, LocaleCode, PluralKind
+from .syntax import MessageSyntax
 
 __all__ = [
     "CARDINAL",
@@ -10,6 +11,7 @@ __all__ = [
     "KeyPath",
     "LocaleCode",
     "LocaleFormat",
+    "MessageSyntax",
     "PluralKind",
     "Segment",
     "TreeLayout",
