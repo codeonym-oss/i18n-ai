@@ -32,8 +32,8 @@ class GenerationOptions:
 @dataclass(frozen=True)
 class GenerateLocalesCommand(Command[GenerationReceipt]):
     """Generate the `targets` of a locale tree from its source with `model`, and write them.
-    Raises `LocaleTreeNotFound`, `SourceLocaleUnknown`, `TargetIsSource`, `ProviderUnknown`, or
-    `ProviderNotInstalled` (see `InstallProviderCommand`)."""
+    Raises `LocaleTreeNotFound`, `SourceLocaleUnknown`, `MixedLocaleFormats`, `TargetIsSource`,
+    `ProviderUnknown`, or `ProviderNotInstalled` (see `InstallProviderCommand`)."""
 
     tree: TreeRequest
     targets: tuple[LocaleCode, ...]

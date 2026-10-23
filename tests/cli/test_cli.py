@@ -71,6 +71,7 @@ def test_main_runs_the_app(
         ("i18next/locales/en", "directory", "auth/login.json"),
         ("icu/messages", "file", "en.json"),
         ("bundle/i18n.json", "bundle", "i18n.json"),
+        ("rails/config/locales", "file", "en.yml"),
     ],
 )
 def test_scan_shows_the_tree_and_the_plan(
@@ -83,6 +84,23 @@ def test_scan_shows_the_tree_and_the_plan(
     assert file in output
     assert "Arabic" in output
     assert "rtl" in output
+
+
+def test_scan_tells_the_format(examples: Path) -> None:
+    (examples / "i18next/locales/en/extra.yml").write_text("a: A\n")
+
+    code, output = invoke("scan", str(examples / "i18next/locales/en"))
+    assert code == 2
+    # the temporary directory's long path may wrap the line
+    assert "mixes the formats json, yaml; choose the one to translate with --format" in " ".join(
+        output.split()
+    )
+
+    code, output = invoke("scan", str(examples / "i18next/locales/en"), "--format", "YAML")
+    assert code == 0, output
+    assert "Format    yaml" in output
+    assert "extra.yml" in output
+    assert "common.json" not in output
 
 
 def test_scan_tells_which_files_qualify(examples: Path) -> None:

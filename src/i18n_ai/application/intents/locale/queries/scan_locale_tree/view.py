@@ -43,6 +43,7 @@ class TargetView:
 class ScanReport:
     root: Path
     layout: str
+    format: str
     source: str
     source_name: str
     source_path: Path

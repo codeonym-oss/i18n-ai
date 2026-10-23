@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ....domain.exports.locale import JsonStyle, LocaleDocument, TargetLocation
+from ....domain.exports.locale import LocaleDocument, SourceFile, TargetLocation
 
 
 class ILocaleStore(ABC):
@@ -9,13 +9,14 @@ class ILocaleStore(ABC):
 
     @abstractmethod
     async def read(self, location: TargetLocation) -> LocaleDocument | None:
-        """The document at `location`, or None if there is none or it is not a JSON object."""
+        """The document at `location`, or None if there is none or it is not an object."""
         raise NotImplementedError
 
     @abstractmethod
     async def write(
-        self, location: TargetLocation, content: dict[str, Any], style: JsonStyle
+        self, location: TargetLocation, content: dict[str, Any], like: SourceFile
     ) -> None:
-        """Write `content` to `location`, making its directories; in a bundle, under its key,
-        keeping the other locales."""
+        """Write `content` to `location` the way `like`, its source file, is written: its format,
+        indent, quoting and comments where the format has them. Makes the directories; under its
+        key, keeps the file's other keys."""
         raise NotImplementedError

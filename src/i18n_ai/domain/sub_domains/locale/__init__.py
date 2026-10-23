@@ -1,5 +1,11 @@
-from .entities import JsonStyle, LocaleDocument, LocaleTree, SourceFile, TargetLocation
-from .exceptions import InvalidLocaleCode, LocaleTreeNotFound, SourceLocaleUnknown, TargetIsSource
+from .entities import LocaleDocument, LocaleTree, SourceFile, TargetLocation, is_message
+from .exceptions import (
+    InvalidLocaleCode,
+    LocaleTreeNotFound,
+    MixedLocaleFormats,
+    SourceLocaleUnknown,
+    TargetIsSource,
+)
 from .placeholders import (
     Branching,
     IcuSyntaxError,
@@ -27,6 +33,7 @@ from .vo import (
     ORDINAL,
     KeyPath,
     LocaleCode,
+    LocaleFormat,
     PluralKind,
     Segment,
     TreeLayout,
@@ -39,14 +46,15 @@ __all__ = [
     "Branching",
     "IcuSyntaxError",
     "InvalidLocaleCode",
-    "JsonStyle",
     "KeyPath",
     "LocaleCode",
     "LocaleDocument",
+    "LocaleFormat",
     "LocaleSchema",
     "LocaleTree",
     "LocaleTreeNotFound",
     "MissingTranslations",
+    "MixedLocaleFormats",
     "PlaceholderStyle",
     "PluralForm",
     "PluralKind",
@@ -68,6 +76,7 @@ __all__ = [
     "errors",
     "extract_schema",
     "fallback",
+    "is_message",
     "known_locales",
     "normalize",
     "qualify",

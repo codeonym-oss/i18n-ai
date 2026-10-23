@@ -27,6 +27,7 @@ def render_scan(console: Console, report: ScanReport, overwrite: bool = False) -
     summary.add_column(style="bold")
     summary.add_column()
     summary.add_row("Layout", f"{report.layout} [dim]({_LAYOUTS.get(report.layout, '')})[/]")
+    summary.add_row("Format", report.format)
     summary.add_row(
         "Source",
         f"[cyan]{report.source}[/] {report.source_name} [dim]{shown(report.source_path)}[/]",

@@ -19,6 +19,7 @@ needs. Nothing is sent to a model.
 | `-s, --source` | The source locale, when the tree has several. |
 | `-o, --output` | Where the targets go. Default: beside the source. |
 | `--include`, `--exclude` | Globs over the source's file names; repeat them. |
+| `-f, --format` | `json` or `yaml`: read only that format's files, when the tree mixes several. |
 
 ## `i18n-ai generate [PATH]`
 
@@ -33,6 +34,7 @@ cannot tell it), model or API key is asked for; see [Getting started](../guide/g
 | `-o, --output` | Where the targets go. Default: beside the source. |
 | `-c, --context` | What the website is, to set the tone and vocabulary. |
 | `--include`, `--exclude` | Globs over the source's file names; repeat them. |
+| `-f, --format` | `json` or `yaml`: read only that format's files, when the tree mixes several. |
 | `--overwrite` | Translate every message again, instead of keeping the good existing ones. |
 | `--strict` | Write no file that has a message which kept failing the rules. |
 | `--no-classify` | Skip the model's check that each file is a locale document. |

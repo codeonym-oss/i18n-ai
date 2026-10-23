@@ -61,6 +61,39 @@ def test_a_missing_form_is_translated_from_other() -> None:
     assert few.plural.source_category == "other"
 
 
+def test_a_nested_family_takes_the_targets_categories() -> None:
+    nested = LocaleDocument({"count": {"one": "1 user", "other": "%{count} users"}})
+
+    arabic = extract_schema(nested, LocaleCode("en"), LocaleCode("ar"))
+    japanese = extract_schema(nested, LocaleCode("en"), LocaleCode("ja"))
+
+    assert list(arabic.template["count"]) == ["zero", "one", "two", "few", "many", "other"]
+    few = next(unit for unit in arabic.units if str(unit.path) == "count.few")
+    assert few.source == "%{count} users"
+    assert few.plural is not None
+    assert few.plural.source_category == "other"
+    assert list(japanese.template["count"]) == ["other"]
+
+
+def test_a_nested_family_keeps_its_zero() -> None:
+    nested = LocaleDocument({"n": {"zero": "none", "one": "one", "other": "many"}})
+    schema = extract_schema(nested, LocaleCode("en"), LocaleCode("de"))
+    assert list(schema.template["n"]) == ["zero", "one", "other"]
+
+
+@pytest.mark.parametrize(
+    "node",
+    [
+        {"one": "1 user"},  # no other
+        {"one": "1 user", "other": "%{count} users", "title": "Users"},
+        {"one": 1, "other": 2},
+    ],
+)
+def test_an_object_that_is_not_only_plural_forms_is_kept(node: dict[str, object]) -> None:
+    schema = extract_schema(LocaleDocument({"n": node}), LocaleCode("en"), LocaleCode("ar"))
+    assert list(schema.template["n"]) == list(node)
+
+
 def test_render_keeps_order_and_non_text() -> None:
     schema = extract_schema(DOCUMENT, LocaleCode("en"), LocaleCode("fr"))
     rendered = schema.render({unit.id: unit.source.upper() for unit in schema.units})

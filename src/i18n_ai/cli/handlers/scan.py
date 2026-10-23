@@ -5,6 +5,7 @@ import typer
 
 from ...application.exports.locale import ScanLocaleTreeQuery
 from ...di import Bootstrap
+from ...domain.exports.locale import LocaleFormat
 from ..common import locales, run, tree_request
 from ..rendering import render_scan
 
@@ -43,9 +44,18 @@ def scan(
         list[str] | None,
         typer.Option("--exclude", help="Leave out the source files matching this glob."),
     ] = None,
+    format: Annotated[
+        LocaleFormat | None,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Read only the locale files in this format, when the tree mixes several.",
+            case_sensitive=False,
+        ),
+    ] = None,
 ) -> None:
     """Scan a locale tree: its layout, its source files, and what each target needs."""
-    tree = tree_request(path, source, output, include, exclude)
+    tree = tree_request(path, source, output, include, exclude, format)
     codes = locales(targets)
 
     async def flow(app: Bootstrap) -> int:

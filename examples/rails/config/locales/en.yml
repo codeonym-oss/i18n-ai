@@ -1,0 +1,31 @@
+# Files in the config/locales directory are used for internationalization and
+# are automatically loaded by Rails.
+
+en:
+  hello: "Hello world"
+  date:
+    formats:
+      default: "%Y-%m-%d"
+      long: "%B %d, %Y"
+    order:
+      - :year
+      - :month
+      - :day
+  users:
+    index:
+      title: Users # the page's heading
+      empty: 'No users yet. Invite someone!'
+      count:
+        zero: No users
+        one: "1 user"
+        other: "%{count} users"
+    show:
+      greeting: "Welcome back, %{name}!"
+      bio: |
+        Tell us about yourself.
+        A few lines are enough.
+  # The settings page
+  settings:
+    save: Save
+    saved: "Your settings were saved."
+    per_page: 25

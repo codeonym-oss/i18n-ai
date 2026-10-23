@@ -11,3 +11,4 @@ class TreeCandidateView:
     layout: str
     locales: tuple[str, ...]
     source: str | None
+    formats: tuple[str, ...] = ()

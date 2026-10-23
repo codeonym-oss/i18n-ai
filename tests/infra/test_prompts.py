@@ -1,6 +1,6 @@
 import json
 
-from i18n_ai.domain.exports.locale import JsonStyle, LocaleCode, LocaleDocument, extract_schema
+from i18n_ai.domain.exports.locale import LocaleCode, LocaleDocument, extract_schema
 from i18n_ai.infra.adapters.langgraph.prompts import (
     classify_human,
     classify_system,
@@ -12,12 +12,9 @@ ICU = LocaleDocument(
     {
         "unread": "You have {count, plural, =0 {nothing} one {# message} other {# messages}}.",
         "invite": "Join <b>{team}</b>",
-    },
-    JsonStyle(),
+    }
 )
-I18NEXT = LocaleDocument(
-    {"item_one": "{{count}} item", "item_other": "{{count}} items"}, JsonStyle()
-)
+I18NEXT = LocaleDocument({"item_one": "{{count}} item", "item_other": "{{count}} items"})
 
 
 def test_the_rules_follow_the_file_and_the_target() -> None:

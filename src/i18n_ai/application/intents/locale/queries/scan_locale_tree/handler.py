@@ -71,6 +71,7 @@ class ScanLocaleTreeQueryHandler(QueryHandler[ScanLocaleTreeQuery, ScanReport]):
         return ScanReport(
             root=tree.root,
             layout=tree.layout.value,
+            format=tree.format.value,
             source=tree.source.value,
             source_name=tree.source.display_name,
             source_path=tree.source_path,

@@ -1,33 +1,27 @@
 from typing import Any
 
 from ....application.ports.locale import ILocaleStore
-from ....domain.exports.locale import JsonStyle, LocaleDocument, TargetLocation
-from .json_io import dump, load_document, read_json, write_atomically
+from ....domain.exports.locale import LocaleDocument, SourceFile, TargetLocation
+from .formats import format_of, load_document
 
 
 class FileSystemLocaleStore(ILocaleStore):
-    """Target documents as JSON files; in a bundle, as one locale's key of the bundle file."""
+    """Target documents as files in their source's format; under a key, as one locale's key of
+    a bundle, or of a file rooted at its locale."""
 
     async def read(self, location: TargetLocation) -> LocaleDocument | None:
-        if not location.path.is_file():
+        adapter = format_of(location.path)
+        if adapter is None or not location.path.is_file():
             return None
-        document, _ = load_document(location.path)
+        document, _ = load_document(location.path, adapter)
         if document is None or location.bundle_key is None:
             return document
         content = document.content.get(location.bundle_key)
-        return LocaleDocument(content, document.style) if isinstance(content, dict) else None
+        return LocaleDocument(content) if isinstance(content, dict) else None
 
     async def write(
-        self, location: TargetLocation, content: dict[str, Any], style: JsonStyle
+        self, location: TargetLocation, content: dict[str, Any], like: SourceFile
     ) -> None:
-        if location.bundle_key is None:
-            write_atomically(location.path, dump(content, style))
-            return
-        # A bundle keeps its other locales, its order and its own style
-        bundle: dict[str, Any] = {}
-        if location.path.is_file():
-            existing, style = read_json(location.path)
-            if isinstance(existing, dict):
-                bundle = existing
-        bundle[location.bundle_key] = content
-        write_atomically(location.path, dump(bundle, style))
+        adapter = format_of(like.path)
+        assert adapter is not None, f"{like.path} was read, so its format is known"
+        adapter.write(location.path, content, like, location.bundle_key)

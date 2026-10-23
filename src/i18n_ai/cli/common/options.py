@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from ...application.ports.locale import TreeRequest
-from ...domain.exports.locale import InvalidLocaleCode, LocaleCode
+from ...domain.exports.locale import InvalidLocaleCode, LocaleCode, LocaleFormat
 
 
 class MissingParameter(typer.BadParameter):
@@ -38,6 +38,7 @@ def tree_request(
     output: Path | None,
     include: list[str] | None,
     exclude: list[str] | None,
+    format: LocaleFormat | None = None,
 ) -> TreeRequest:
     source_code = locales([source])[0] if source else None
     return TreeRequest(
@@ -46,4 +47,5 @@ def tree_request(
         output=output,
         include=tuple(include or ()),
         exclude=tuple(exclude or ()),
+        format=format,
     )

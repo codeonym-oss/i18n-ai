@@ -16,8 +16,10 @@ i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clin
   offers CLDR's locales to pick, lists the providers and each one's models from its API, and
   asks for a missing API key, hidden. It ends with the command that repeats the run, for CI.
 - **Any tree.** A directory per locale (`locales/en/**/*.json`), a file per locale
-  (`messages/en.json`), or one bundle holding them all (`{"en": {...}, "fr": {...}}`). The
-  targets are written beside the source, in its JSON style (indent, final newline, UTF-8).
+  (`messages/en.json`, Rails' `config/locales/en.yml`), or one bundle holding them all
+  (`{"en": {...}, "fr": {...}}`). The targets are written beside the source, the way it is
+  written (indent, line endings, UTF-8).
+- **JSON and YAML.** YAML targets keep the source's comments, key order and quoting.
 - **A precheck first.** The tree, its source files and whether each qualifies, and what each target
   needs, shown before anything is sent to a model, for you to confirm.
 - **Parallel agents.** LangGraph classifies every file in parallel, then runs one agent per
@@ -88,13 +90,14 @@ Exit codes: 0 done, 1 something was not written (or nothing qualified, or you de
 ```
 
 1. **Precheck** (`scan`): finds the layout and the source, reads every source file, and *qualifies*
-   it: a JSON object whose values are mostly text. Config and data files are ignored.
+   it: an object whose values are mostly text. Config and data files are ignored.
 2. **Classify**: the model confirms each qualifying file holds user-facing messages, and says what
    they are for ("sign-in screens"), which the translators get as context.
 3. **Extract the schema**: the target's shape. Keys and order are the source's, and numbers,
    booleans and empty strings are copied. A slot is made for each message, with the
-   placeholders it must keep. i18next plural families take the **target's** CLDR categories:
-   `item_one`/`item_other` becomes six keys in Arabic and one in Japanese.
+   placeholders it must keep. Plural families take the **target's** CLDR categories: i18next's
+   `item_one`/`item_other`, or Rails' nested `item: {one:, other:}`, becomes six forms in Arabic
+   and one in Japanese.
 4. **Translate** in batches, at most `--concurrency` calls at once across all agents.
 5. **Validate** each answer, and send the rejected ones back with their problems.
 6. **Assemble** the document. A message that never passed keeps its source text, and is reported
@@ -113,7 +116,7 @@ A translation is **rejected** when it:
 - hides an argument behind an ICU apostrophe (`l'{count}`); the model is told to write `’` instead.
 
 It is **kept, with a warning**, when an ICU plural lacks some of the target's categories, or a
-message is left as in the source. An i18next plural form may show the count or not (Russian's
+message is left as in the source. A plural form may show the count or not (Russian's
 `one` is also 21, English's is not). Leading and trailing whitespace is copied from the source.
 
 ## Architecture

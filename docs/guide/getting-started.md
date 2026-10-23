@@ -75,7 +75,7 @@ i18n-ai scan locales/en -t fr,ar
 ```
 
 It shows the layout it found, the source locale and the other existing ones, every source file
-and whether it qualifies (a JSON object of mostly text, not configuration or data), and for each
+and whether it qualifies (an object of mostly text, not configuration or data), and for each
 target the files it will write and how many messages need translating. Nothing is sent to a
 model.
 
@@ -89,7 +89,7 @@ i18n-ai generate locales/en -t fr,ar -m openai:gpt-4.1-mini -c "An online booksh
 missing, and before translating. `-y` skips both questions; `--dry-run` stops after the
 precheck.
 
-Each file is written as soon as its agent finishes, in the source's JSON style. The table at the
+Each file is written as soon as its agent finishes, the way its source is written. The table at the
 end tells, for each file and locale, what was written, how many messages were translated or
 kept, and any message that kept failing the rules (it keeps its source text, and is listed).
 

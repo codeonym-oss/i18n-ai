@@ -33,10 +33,16 @@ The placeholders it knows:
 
 ## Plurals
 
-An i18next plural family takes the **target's** CLDR categories. `item_one` and `item_other`
+A plural family takes the **target's** CLDR categories. i18next's `item_one` and `item_other`
 become six keys in Arabic (`item_zero` … `item_many`, `item_other`) and one in Japanese
-(`item_other`). A category the source lacks is translated from its `other` form. A form may show
-the count or not: Russian's `one` is also 21, so it needs `{{count}}` where English's does not.
+(`item_other`). So does a nested family, Rails' `item: {one: …, other: …}`: an object whose keys
+are all plural categories, `other` among them. Its `zero` is kept in every language, since Rails
+shows it for a count of 0. Rails itself reads only `zero`, `one` and `other`; the other forms
+(Arabic's `two`, `few`, `many`) are read when the app has the
+[rails-i18n](https://github.com/svenfuchs/rails-i18n) gem's plural rules, which it turns on by
+default. A category the source lacks is translated from its `other` form. A form
+may show the count or not: Russian's `one` is also 21, so it needs `{{count}}` (or `%{count}`)
+where English's does not.
 
 ## Whitespace
 

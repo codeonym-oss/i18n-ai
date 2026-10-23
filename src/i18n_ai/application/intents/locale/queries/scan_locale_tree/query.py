@@ -12,7 +12,7 @@ from .view import ScanReport
 class ScanLocaleTreeQuery(Query[ScanReport]):
     """The precheck of a generation: the tree, its source files and whether each qualifies, and
     for each target where its files go and how many messages each needs. Raises
-    `LocaleTreeNotFound`, `SourceLocaleUnknown` or `TargetIsSource`."""
+    `LocaleTreeNotFound`, `SourceLocaleUnknown`, `MixedLocaleFormats` or `TargetIsSource`."""
 
     tree: TreeRequest
     targets: tuple[LocaleCode, ...] = ()

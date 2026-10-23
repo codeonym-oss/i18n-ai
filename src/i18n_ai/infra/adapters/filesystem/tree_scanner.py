@@ -6,6 +6,9 @@
 - the directory holding the locales, `locales/`: whichever of the first two it holds, with the
   source named, or `en` when there is one, or the only locale.
 
+Its files are in one of the `formats`, the one asked or the only one there. A file whose only
+key is its locale, as Rails writes `en.yml`, holds its messages under that key.
+
 `detect` looks for those trees under a project, for the user to pick one."""
 
 import fnmatch
@@ -18,13 +21,15 @@ from ....domain.exports.locale import (
     InvalidLocaleCode,
     LocaleCode,
     LocaleDocument,
+    LocaleFormat,
     LocaleTree,
     LocaleTreeNotFound,
+    MixedLocaleFormats,
     SourceFile,
     SourceLocaleUnknown,
     TreeLayout,
 )
-from .json_io import load_document, read_json
+from .formats import FileFormat, extensions, format_of, load_document
 
 _SKIPPED = {"node_modules", "__pycache__", "dist", "build"}
 _DEFAULT_SOURCE = LocaleCode("en")
@@ -33,7 +38,7 @@ _DEFAULT_SOURCE = LocaleCode("en")
 _DETECT_DEPTH = 5
 _DETECT_DIRECTORIES = 5000
 _DETECT_SKIPPED = _SKIPPED | {"vendor", "venv", "target", "coverage", "out", "site-packages"}
-# A bundle is read whole to know it is one: bigger JSON files are not locales.
+# A bundle is read whole to know it is one: bigger files are not locales.
 _BUNDLE_BYTES = 2_000_000
 # CLDR knows many three-letter languages that are also directory names (`src`, `lib`...): only
 # these few are taken for locales when detecting.
@@ -88,45 +93,52 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
     # The path is a file: a locale file, or a bundle
 
     def _from_file(self, path: Path, request: TreeRequest) -> LocaleTree:
-        if path.suffix.lower() != ".json":
-            raise LocaleTreeNotFound(str(path), "it is not a JSON file")
+        adapter = format_of(path)
+        if adapter is None or (request.format is not None and adapter.format != request.format):
+            wanted = ", ".join(extensions(request.format))
+            raise LocaleTreeNotFound(str(path), f"it is not a locale file ({wanted})")
         locale = _locale_of(path.stem, request.source)
         if locale is not None:
             return self._file_layout(path.parent, path, locale, request)
 
         try:
-            content, style = read_json(path)
+            content = adapter.read(path)
         except (OSError, ValueError) as error:
-            raise LocaleTreeNotFound(str(path), f"it is not valid JSON ({error})") from error
+            raise LocaleTreeNotFound(
+                str(path), f"it is not valid {adapter.label} ({error})"
+            ) from error
         locales = _bundle_locales(content)
         if not locales:
             raise LocaleTreeNotFound(
                 str(path), "its name is not a locale code, and its keys are not locales"
             )
         source = _choose_source(str(path), locales, request.source)
-        document = LocaleDocument(content[source.value], style)
+        document = LocaleDocument(content[source.value])
         return LocaleTree(
             root=path,
             layout=TreeLayout.BUNDLE,
             source=source,
-            files=(SourceFile(PurePosixPath(path.name), path, document),),
+            files=(SourceFile(PurePosixPath(path.name), path, document, root_key=source.value),),
             existing=tuple(locale for locale in locales if not locale.same_as(source)),
             output=_output(request, path),
+            format=adapter.format,
         )
 
     def _file_layout(
         self, root: Path, path: Path, source: LocaleCode, request: TreeRequest
     ) -> LocaleTree:
-        document, error = load_document(path)
+        adapter = format_of(path)
+        assert adapter is not None
         siblings = [file for file in root.glob(f"*{path.suffix}") if file.is_file()]
         existing = _locales(file.stem for file in siblings if file != path)
         return LocaleTree(
             root=root,
             layout=TreeLayout.FILE,
             source=source,
-            files=(SourceFile(PurePosixPath(path.name), path, document, error),),
+            files=(_source_file(PurePosixPath(path.name), path, adapter, source),),
             existing=existing,
             output=_output(request, root),
+            format=adapter.format,
         )
 
     # The path is a directory: a locale's, or the one holding the locales
@@ -142,29 +154,46 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             source = _choose_source(str(path), locale_directories, request.source)
             return self._directory_layout(path, directories[source.value], source, request)
 
-        files = {child.stem: child for child in path.glob("*.json") if child.is_file()}
-        locale_files = _locales(files)
+        files = [
+            child
+            for child in sorted(path.iterdir())
+            if child.suffix.lower() in extensions(request.format)
+            and child.is_file()
+            and LocaleCode.recognized(child.stem) is not None
+        ]
+        _one_format(path, files)
+        by_stem = {child.stem: child for child in files}
+        locale_files = _locales(by_stem)
         if locale_files:
             source = _choose_source(str(path), locale_files, request.source)
-            return self._file_layout(path, files[source.value], source, request)
+            return self._file_layout(path, by_stem[source.value], source, request)
 
         raise LocaleTreeNotFound(
-            str(path), "it holds no locale directory (en/) and no locale file (en.json)"
+            str(path), "it holds no locale directory (en/) and no locale file (en.json, en.yml)"
         )
 
     def _directory_layout(
         self, root: Path, directory: Path, source: LocaleCode, request: TreeRequest
     ) -> LocaleTree:
-        files: list[SourceFile] = []
-        for path in sorted(directory.rglob("*.json")):
+        paths: list[Path] = []
+        names: list[PurePosixPath] = []
+        wanted = extensions(request.format)
+        for path in sorted(directory.rglob("*")):
             relative = path.relative_to(directory)
+            if path.suffix.lower() not in wanted or not path.is_file():
+                continue
             if any(part.startswith(".") or part in _SKIPPED for part in relative.parts[:-1]):
                 continue
             name = PurePosixPath(relative.as_posix())
-            if not _selected(str(name), request.include, request.exclude):
-                continue
-            document, error = load_document(path)
-            files.append(SourceFile(name, path, document, error))
+            if _selected(str(name), request.include, request.exclude):
+                paths.append(path)
+                names.append(name)
+        found = _one_format(directory, paths)
+        files = []
+        for name, path in zip(names, paths, strict=True):
+            adapter = format_of(path)
+            assert adapter is not None
+            files.append(_source_file(name, path, adapter, source))
         siblings = (child.name for child in root.iterdir() if child.is_dir() and child != directory)
         return LocaleTree(
             root=root,
@@ -173,27 +202,67 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             files=tuple(files),
             existing=_locales(siblings),
             output=_output(request, root),
+            format=found or request.format or LocaleFormat.JSON,
         )
 
 
+def _source_file(
+    name: PurePosixPath, path: Path, adapter: FileFormat, source: LocaleCode
+) -> SourceFile:
+    """A source file, its messages under its locale's key when that is its only key."""
+    document, error = load_document(path, adapter)
+    if document is not None and len(document.content) == 1:
+        [(key, content)] = document.content.items()
+        locale = LocaleCode.recognized(key)
+        if isinstance(content, dict) and locale is not None and locale.same_as(source):
+            return SourceFile(name, path, LocaleDocument(content), root_key=key)
+    return SourceFile(name, path, document, error)
+
+
+def _one_format(path: Path, files: list[Path]) -> LocaleFormat | None:
+    """The format of `files`, or None for no file. Raises `MixedLocaleFormats` for several."""
+    formats = sorted({adapter.format for file in files if (adapter := format_of(file))})
+    if len(formats) > 1:
+        raise MixedLocaleFormats(str(path), [format.value for format in formats])
+    return formats[0] if formats else None
+
+
 def _tree_in(directory: Path, children: list[Path]) -> TreeCandidate | None:
-    """The tree `directory` holds: locale directories with JSON in them, or locale files."""
-    locale_directories = _detected(
-        directory,
-        (
-            child.name
-            for child in children
-            if child.is_dir() and next(child.rglob("*.json"), None) is not None
-        ),
-    )
+    """The tree `directory` holds: locale directories with locale files in them, or locale
+    files."""
+    formats: dict[str, set[LocaleFormat]] = {}
+    for child in children:
+        if child.is_dir():
+            # The first file tells the format; `scan` finds out whether they all share it
+            first = next((file for file in child.rglob("*") if format_of(file) is not None), None)
+            if first is not None:
+                formats[child.name] = {format_of(first).format}  # type: ignore[union-attr]
+    locale_directories = _detected(directory, formats)
     if locale_directories:
-        return TreeCandidate(directory, TreeLayout.DIRECTORY, locale_directories)
-    locale_files = _detected(
-        directory, (child.stem for child in children if child.suffix == ".json" and child.is_file())
-    )
+        return TreeCandidate(
+            directory,
+            TreeLayout.DIRECTORY,
+            locale_directories,
+            _formats(formats[locale.value] for locale in locale_directories),
+        )
+    files = {
+        child.stem: {adapter.format}
+        for child in children
+        if (adapter := format_of(child)) is not None and child.is_file()
+    }
+    locale_files = _detected(directory, files)
     if locale_files:
-        return TreeCandidate(directory, TreeLayout.FILE, locale_files)
+        return TreeCandidate(
+            directory,
+            TreeLayout.FILE,
+            locale_files,
+            _formats(files[locale.value] for locale in locale_files),
+        )
     return None
+
+
+def _formats(found: Iterable[set[LocaleFormat]]) -> tuple[LocaleFormat, ...]:
+    return tuple(sorted(set().union(*found)))
 
 
 def _detected(directory: Path, names: Iterable[str]) -> tuple[LocaleCode, ...]:
@@ -211,17 +280,18 @@ def _detected(directory: Path, names: Iterable[str]) -> tuple[LocaleCode, ...]:
 def _bundles_in(children: list[Path]) -> list[TreeCandidate]:
     bundles = []
     for child in children:
-        if child.suffix != ".json" or LocaleCode.recognized(child.stem) is not None:
+        adapter = format_of(child)
+        if adapter is None or LocaleCode.recognized(child.stem) is not None:
             continue
         try:
             if not child.is_file() or child.stat().st_size > _BUNDLE_BYTES:
                 continue
-            content, _ = read_json(child)
+            content = adapter.read(child)
         except (OSError, ValueError):
             continue
         locales = _bundle_locales(content)
         if locales:
-            bundles.append(TreeCandidate(child, TreeLayout.BUNDLE, locales))
+            bundles.append(TreeCandidate(child, TreeLayout.BUNDLE, locales, (adapter.format,)))
     return bundles
 
 

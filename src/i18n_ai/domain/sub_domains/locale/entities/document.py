@@ -1,25 +1,26 @@
+import re
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from ..vo.key_path import KeyPath
 
+# A Ruby symbol, as Rails' `date.order` lists them (`:year`): a name, not text.
+_SYMBOL = re.compile(r"^:[A-Za-z_]\w*$")
 
-@dataclass(frozen=True)
-class JsonStyle:
-    """How a document's JSON is written, so that a generated locale reads like its source:
-    the indent (spaces, a tab, or None for one line) and a newline at the end."""
 
-    indent: int | str | None = 2
-    trailing_newline: bool = True
+def is_message(value: Any) -> bool:
+    """Whether a leaf is text to translate: a string with something in it, and not a Ruby
+    symbol."""
+    return isinstance(value, str) and bool(value.strip()) and not _SYMBOL.match(value)
 
 
 @dataclass(frozen=True)
 class LocaleDocument:
-    """One locale's messages from one file: a JSON object whose leaves are mostly strings."""
+    """One locale's messages from one file: an object, read from JSON or YAML, whose leaves are
+    mostly strings. How the file is written is the file's own business."""
 
     content: dict[str, Any]
-    style: JsonStyle = field(default_factory=JsonStyle)
 
     def leaves(self) -> Iterator[tuple[KeyPath, Any]]:
         """Every leaf, with its path, in document order."""

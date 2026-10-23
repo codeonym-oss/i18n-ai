@@ -7,7 +7,6 @@ from i18n_ai.domain.exports.locale import (
     ORDINAL,
     IcuSyntaxError,
     InvalidLocaleCode,
-    JsonStyle,
     KeyPath,
     LocaleCode,
     LocaleDocument,
@@ -17,6 +16,7 @@ from i18n_ai.domain.exports.locale import (
     SourceLocaleUnknown,
     TargetIsSource,
     TreeLayout,
+    is_message,
     known_locales,
     qualify,
 )
@@ -82,7 +82,7 @@ def test_key_paths_read_like_code() -> None:
 
 def tree(layout: TreeLayout, root: Path, existing: tuple[str, ...] = ()) -> LocaleTree:
     name = PurePosixPath("auth/login.json" if layout == TreeLayout.DIRECTORY else "en.json")
-    file = SourceFile(name, root / "en" / name, LocaleDocument({}, JsonStyle()))
+    file = SourceFile(name, root / "en" / name, LocaleDocument({}))
     return LocaleTree(
         root=root,
         layout=layout,
@@ -117,6 +117,24 @@ def test_an_existing_locale_keeps_its_spelling(tmp_path: Path) -> None:
     assert directory.has(LocaleCode("pt-br"))
 
 
+def test_a_rooted_file_goes_under_the_target(tmp_path: Path) -> None:
+    source = SourceFile(PurePosixPath("en.yml"), tmp_path / "en.yml", None, root_key="en")
+    files = LocaleTree(tmp_path, TreeLayout.FILE, LocaleCode("en"), (source,), (), tmp_path)
+
+    location = files.target_location(LocaleCode("pt-BR"), source)
+
+    assert location.path == tmp_path / "pt-BR.yml"
+    assert location.bundle_key == "pt-BR"
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [("Hello", True), ("  ", False), (":year", False), (": not a symbol", True), (3, False)],
+)
+def test_what_is_a_message(value: object, message: bool) -> None:
+    assert is_message(value) is message
+
+
 @pytest.mark.parametrize(
     ("content", "qualifies", "reason"),
     [
@@ -126,7 +144,7 @@ def test_an_existing_locale_keeps_its_spelling(tmp_path: Path) -> None:
     ],
 )
 def test_qualification(content: dict[str, object], qualifies: bool, reason: str) -> None:
-    result = qualify(LocaleDocument(content, JsonStyle()))
+    result = qualify(LocaleDocument(content))
 
     assert result.qualifies is qualifies
     assert reason in result.reason
