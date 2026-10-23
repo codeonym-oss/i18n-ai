@@ -117,12 +117,12 @@ class _Builder:
             if _is_nested_family(value):
                 # Rails keeps a `zero` the language has not: it is what a count of 0 shows
                 keep = ("zero",) if "zero" in value else ()
-                return self.family(value, CARDINAL, path, str, keep)
+                return self.family(value, CARDINAL, path, str, keep, note=self.notes.get(path))
             return self.object(value, path)
         if isinstance(value, list):
             return [self.node(item, path.child(index)) for index, item in enumerate(value)]
         if is_message(value):
-            return self.slot(path, value, None, path)
+            return self.slot(path, value, None, self.notes.get(path))
         return value
 
     def object(self, node: dict[str, Any], path: KeyPath) -> dict[str, Any]:
@@ -152,9 +152,11 @@ class _Builder:
         path: KeyPath,
         key_of: Callable[[str], str],
         keep: tuple[str, ...] = (),
+        note: str | None = None,
     ) -> dict[str, Any]:
         """A plural family's forms, by category, under the target's categories (and `keep`),
-        each translated from the source's own form or else from `other`."""
+        each translated from the source's own form or else from `other`, with that form's note
+        or else the family's."""
         wanted = set(self.target.plural_categories(kind)) | set(keep)
         rendered: dict[str, Any] = {}
         for category in (category for category in _ORDER if category in wanted):
@@ -164,19 +166,20 @@ class _Builder:
             form = PluralForm(kind, category, source_category)
             source = path.child(key_of(source_category))
             rendered[key] = (
-                self.slot(path.child(key), text, form, source) if is_message(text) else text
+                self.slot(path.child(key), text, form, self.notes.get(source, note))
+                if is_message(text)
+                else text
             )
         return rendered
 
-    def slot(self, path: KeyPath, text: str, plural: PluralForm | None, source: KeyPath) -> Slot:
-        """A unit for `text`, which is at `source` in the source document."""
+    def slot(self, path: KeyPath, text: str, plural: PluralForm | None, note: str | None) -> Slot:
         unit = SourceUnit(
             id=str(len(self.units) + 1),
             path=path,
             source=text,
             signature=signature_of(text, quotes=self.quotes),
             plural=plural,
-            note=self.notes.get(source),
+            note=note,
         )
         self.units.append(unit)
         return Slot(unit.id)

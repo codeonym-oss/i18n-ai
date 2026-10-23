@@ -763,6 +763,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "mediary", extra = ["dishka"] },
+    { name = "polib" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "questionary" },
@@ -786,6 +787,7 @@ dev = [
     { name = "sphinx", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "sphinx", version = "9.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "sphinx-autobuild" },
+    { name = "types-polib" },
 ]
 docs = [
     { name = "myst-parser" },
@@ -810,6 +812,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=1.0" },
     { name = "langgraph", specifier = ">=1.0" },
     { name = "mediary", extras = ["dishka"], specifier = ">=0.4.0" },
+    { name = "polib", specifier = ">=1.2" },
     { name = "pydantic", specifier = ">=2.11" },
     { name = "python-dotenv", specifier = ">=1.1" },
     { name = "questionary", specifier = ">=2.1" },
@@ -832,6 +835,7 @@ dev = [
     { name = "shibuya", specifier = ">=2026.7" },
     { name = "sphinx", specifier = ">=9.1" },
     { name = "sphinx-autobuild", specifier = ">=2025.8" },
+    { name = "types-polib", specifier = ">=1.2.0.20260518" },
 ]
 docs = [
     { name = "myst-parser", specifier = ">=5.1" },
@@ -1612,6 +1616,15 @@ wheels = [
 ]
 
 [[package]]
+name = "polib"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/10/9a/79b1067d27e38ddf84fe7da6ec516f1743f31f752c6122193e7bce38bdbf/polib-1.2.0.tar.gz", hash = "sha256:f3ef94aefed6e183e342a8a269ae1fc4742ba193186ad76f175938621dbfc26b", size = 161658, upload-time = "2023-02-23T17:53:56.873Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/99/45bb1f9926efe370c6dbe324741c749658e44cb060124f28dad201202274/polib-1.2.0-py2.py3-none-any.whl", hash = "sha256:1c77ee1b81feb31df9bca258cbc58db1bbb32d10214b173882452c73af06d62d", size = 20634, upload-time = "2023-02-23T17:53:59.919Z" },
+]
+
+[[package]]
 name = "pre-commit"
 version = "4.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2255,6 +2268,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/03/51/d33db42cc72ffd8c30777547b42d01f0cbf9d95a770457698d0174b3ed71/typer-0.27.3.tar.gz", hash = "sha256:d0396f770a560ab1b0a8504e13b5f254b728cedb05c61cf0359e944e50ce8901", size = 205303, upload-time = "2026-10-06T17:24:16.61Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl", hash = "sha256:e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff", size = 123312, upload-time = "2026-10-06T17:24:15.054Z" },
+]
+
+[[package]]
+name = "types-polib"
+version = "1.2.0.20260518"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/a0/bc3cfd4d6cb2e9798a28579dd4dd39675cde66a52dd9f5f158b0afc80420/types_polib-1.2.0.20260518.tar.gz", hash = "sha256:2b593a1c6eceb1c4d2ef41054d24ec17c5ee3ec4f2a29a26ece75d8f5715420f", size = 9285, upload-time = "2026-05-18T06:02:24.073Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/05/11cf19d219d4cdf53bbf8b3e0c9254d7a04d4b1a6df966124421e407138e/types_polib-1.2.0.20260518-py3-none-any.whl", hash = "sha256:1a6b9bd7eab3672a1c2e54c939b3fb720241e2b671e34a60cb82d2f791eba025", size = 8528, upload-time = "2026-05-18T06:02:22.737Z" },
 ]
 
 [[package]]

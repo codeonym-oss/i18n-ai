@@ -1,3 +1,4 @@
+import re
 from pathlib import Path, PurePosixPath
 
 import pytest
@@ -10,6 +11,7 @@ from i18n_ai.domain.exports.locale import (
     KeyPath,
     LocaleCode,
     LocaleDocument,
+    LocaleFormat,
     LocaleTree,
     LocaleTreeNotFound,
     SourceFile,
@@ -207,3 +209,22 @@ def test_the_known_locales_put_the_most_shipped_first() -> None:
     assert len({locale.key for locale in locales}) == len(locales)
     assert any(locale.value == "sw" for locale in locales)
     assert not any(locale.value == "en" for locale in locales[:40])
+
+
+def test_gettext_plural_forms_speak_only_of_n() -> None:
+    forms = LocaleCode("fr").gettext_plural_forms()
+    assert forms.startswith("nplurals=3; plural=")
+    assert set(re.findall(r"[a-z]+", forms.split("plural=", 1)[1])) == {"n"}
+    assert LocaleCode("ja").gettext_plural_forms() == "nplurals=1; plural=(0);"
+
+
+def test_the_category_of_a_count() -> None:
+    assert [LocaleCode("ru").plural_category(n) for n in (1, 3, 5, 21)] == [
+        "one", "few", "many", "one",
+    ]  # fmt: skip
+
+
+def test_a_template_is_written_as_a_catalog() -> None:
+    assert LocaleFormat.PO.target_suffix(".pot") == ".po"
+    assert LocaleFormat.PO.target_suffix(".po") == ".po"
+    assert LocaleFormat.JSON.target_suffix(".json") == ".json"

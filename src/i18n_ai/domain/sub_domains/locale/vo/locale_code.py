@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import Literal
 
 from babel import Locale, UnknownLocaleError
+from babel.plural import to_gettext
 
 from ..exceptions.locale_code import InvalidLocaleCode
 
@@ -82,6 +83,22 @@ class LocaleCode:
         form = self._cldr.ordinal_form if kind == ORDINAL else self._cldr.plural_form
         tags = set(form.tags) | {"other"}
         return tuple(category for category in _CATEGORY_ORDER if category in tags)
+
+    def plural_category(self, count: int) -> str:
+        """The CLDR cardinal category of a whole `count`: Russian's `few` for 3."""
+        return (
+            str(self._cldr.plural_form(count))
+            if self._cldr is not None
+            else ("one" if count == 1 else "other")
+        )
+
+    def gettext_plural_forms(self) -> str:
+        """gettext's `Plural-Forms` for this locale, numbering its cardinal categories in CLDR's
+        order: `nplurals=2; plural=(n != 1);` in spirit for English. gettext counts are integers
+        written plainly, so CLDR's exponent operand `e` is 0."""
+        if self._cldr is None:
+            return "nplurals=2; plural=(n != 1);"
+        return re.sub(r"\be\b", "0", to_gettext(self._cldr.plural_form))
 
     def __str__(self) -> str:
         return self.value

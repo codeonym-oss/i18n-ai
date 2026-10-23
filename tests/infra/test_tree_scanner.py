@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -74,13 +75,15 @@ async def test_detect_finds_every_tree_in_a_project(examples: Path) -> None:
         (c.path.relative_to(examples).as_posix(), c.layout.value, *c.formats) for c in found
     ] == [
         ("bundle/i18n.json", "bundle", "json"),
+        ("django/locale", "directory", "po"),
+        ("gnu/po", "file", "po"),
         ("i18next/locales", "directory", "json"),
         ("icu/messages", "file", "json"),
         ("vue-i18n/locales", "file", "yaml"),
         ("flutter/lib/l10n", "file", "arb"),
         ("rails/config/locales", "file", "yaml"),
     ]
-    assert [locale.value for locale in found[1].locales] == ["en", "fr"]
+    assert [locale.value for locale in found[3].locales] == ["en", "fr"]
 
 
 async def test_detect_finds_nothing_in_a_project_without_locales(tmp_path: Path) -> None:
@@ -164,12 +167,12 @@ async def test_mixed_locale_files_are_refused(tmp_path: Path) -> None:
 
 
 async def test_a_file_in_another_format_is_not_a_tree(tmp_path: Path) -> None:
-    (tmp_path / "en.po").write_text('msgid "a"\nmsgstr ""\n')
+    (tmp_path / "en.properties").write_text("a=A\n")
     (tmp_path / "en.json").write_text('{"a": "A"}')
     scanner = FileSystemLocaleTreeScanner()
 
-    with pytest.raises(LocaleTreeNotFound, match=r"\(\.json, \.yml, \.yaml, \.arb\)"):
-        await scanner.scan(TreeRequest(tmp_path / "en.po"))
+    with pytest.raises(LocaleTreeNotFound, match=r"\(\.json, \.yml, \.yaml, \.arb, \.po, \.pot\)"):
+        await scanner.scan(TreeRequest(tmp_path / "en.properties"))
     with pytest.raises(LocaleTreeNotFound, match=r"\(\.yml, \.yaml\)"):
         await scanner.scan(TreeRequest(tmp_path / "en.json", format=LocaleFormat.YAML))
 
@@ -202,3 +205,80 @@ async def test_a_new_arb_locale_is_spelled_with_an_underscore(tmp_path: Path) ->
     assert location.path == tmp_path / "intl_zh_Hant_TW.arb"
     assert location.locale == "zh_Hant_TW"
     assert json.target_location(LocaleCode("pt-BR"), json.files[0]).path == tmp_path / "pt-BR.json"
+
+
+async def test_a_django_tree_without_its_source_reads_the_msgids(examples: Path) -> None:
+    locale = examples / "django" / "locale"
+
+    tree = await FileSystemLocaleTreeScanner().scan(TreeRequest(locale))
+
+    assert (tree.layout, tree.format, tree.source.value) == (
+        TreeLayout.DIRECTORY,
+        LocaleFormat.PO,
+        "en",
+    )
+    [file] = tree.files
+    assert str(file.name) == "LC_MESSAGES/django.po"
+    assert file.path == locale / "fr/LC_MESSAGES/django.po"
+    assert file.document is not None
+    assert file.document.content["Welcome to our shop"] == "Welcome to our shop"  # not French
+    assert tree.source_path == file.path
+    assert [code.value for code in tree.existing] == ["fr"]
+    assert tree.target_location(LocaleCode("pt-BR"), file).path == (
+        locale / "pt_BR/LC_MESSAGES/django.po"
+    )
+
+
+async def test_the_latest_catalog_is_the_template(tmp_path: Path) -> None:
+    for locale, mtime in (("de", 2_000_000_000), ("fr", 1_000_000_000)):
+        catalog = tmp_path / locale / "LC_MESSAGES" / "app.po"
+        catalog.parent.mkdir(parents=True)
+        catalog.write_text(f'msgid "{locale}"\nmsgstr ""\n')
+        os.utime(catalog, (mtime, mtime))
+
+    tree = await FileSystemLocaleTreeScanner().scan(TreeRequest(tmp_path))
+
+    assert tree.files[0].path == tmp_path / "de/LC_MESSAGES/app.po"
+    fr = await FileSystemLocaleTreeScanner().scan(TreeRequest(tmp_path, source=LocaleCode("fr")))
+    assert fr.source.value == "fr"
+    assert fr.files[0].path == tmp_path / "fr/LC_MESSAGES/app.po"
+
+
+async def test_a_template_beside_its_catalogs(examples: Path) -> None:
+    po = examples / "gnu" / "po"
+    scanner = FileSystemLocaleTreeScanner()
+
+    tree = await scanner.scan(TreeRequest(po))
+
+    assert (tree.layout, tree.format, tree.prefix) == (TreeLayout.FILE, LocaleFormat.PO, "")
+    assert tree.files[0].path == po / "notes.pot"
+    assert [code.value for code in tree.existing] == ["de"]
+    assert tree.target_location(LocaleCode("ar"), tree.files[0]).path == po / "ar.po"
+    assert await scanner.scan(TreeRequest(po / "notes.pot")) == tree
+
+
+async def test_a_template_names_its_catalogs_as_they_are(tmp_path: Path) -> None:
+    (tmp_path / "acme.pot").write_text('msgid "a"\nmsgstr ""\n')
+    (tmp_path / "acme-fr_FR.po").write_text('msgid "a"\nmsgstr "b"\n')
+
+    tree = await FileSystemLocaleTreeScanner().scan(TreeRequest(tmp_path / "acme.pot"))
+
+    assert tree.prefix == "acme-"
+    assert [code.value for code in tree.existing] == ["fr_FR"]
+    assert tree.target_location(LocaleCode("pt-BR"), tree.files[0]).path == (
+        tmp_path / "acme-pt_BR.po"
+    )
+
+
+async def test_a_babel_template_beside_its_locale_directories(tmp_path: Path) -> None:
+    (tmp_path / "messages.pot").write_text('msgid "a"\nmsgstr ""\n')
+    (tmp_path / "fr/LC_MESSAGES").mkdir(parents=True)
+    (tmp_path / "fr/LC_MESSAGES/messages.po").write_text('msgid "a"\nmsgstr "b"\n')
+
+    tree = await FileSystemLocaleTreeScanner().scan(TreeRequest(tmp_path))
+
+    [file] = tree.files
+    assert (str(file.name), file.path) == ("LC_MESSAGES/messages.po", tmp_path / "messages.pot")
+    assert tree.target_location(LocaleCode("de"), file).path == (
+        tmp_path / "de/LC_MESSAGES/messages.po"
+    )

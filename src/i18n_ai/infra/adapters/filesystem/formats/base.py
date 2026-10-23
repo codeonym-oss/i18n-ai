@@ -14,9 +14,10 @@ class FileFormat(ABC):
     label: str  # as an error names it: `JSON`
 
     @abstractmethod
-    def read(self, path: Path) -> Any:
-        """The content of `path`, as plain dicts, lists, strings and numbers, its keys strings.
-        Raises `OSError`, or `ValueError` when it is not valid."""
+    def read(self, path: Path, source: bool = False) -> Any:
+        """The content of `path`, as plain dicts, lists, strings and numbers, its keys strings:
+        as a source's when `source`, for a format whose files hold both a source text and a
+        translation. Raises `OSError`, or `ValueError` when it is not valid."""
         raise NotImplementedError
 
     def notes(self, path: Path) -> dict[KeyPath, str]:

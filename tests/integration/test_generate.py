@@ -15,7 +15,7 @@ from i18n_ai.application.exports.locale import (
 from i18n_ai.application.ports.locale import TreeRequest
 from i18n_ai.di.container import build_container
 from i18n_ai.di.messaging import build_mediator
-from i18n_ai.domain.exports.locale import LocaleCode, TargetIsSource
+from i18n_ai.domain.exports.locale import KeyPath, LocaleCode, TargetIsSource
 from i18n_ai.domain.exports.provider import ModelSpec
 from support.fakes import FakeGateway, FakeModel
 
@@ -264,3 +264,44 @@ async def test_a_flutter_tree_in_arb(
     notes = {str(unit.path): unit.note for batch in gateway.batches for unit in batch.units}
     assert notes["greeting"] == "Shown on the home screen"
     assert notes["noteCount"] is None
+
+
+async def test_a_django_tree_is_filled_and_extended(
+    mediator: Mediator, examples: Path, gateway: FakeGateway
+) -> None:
+    locale = examples / "django" / "locale"
+
+    receipt = await mediator.send(
+        GenerateLocalesCommand(TreeRequest(locale), codes("fr", "ar"), MODEL)
+    )
+
+    assert receipt.ok
+    french = (locale / "fr/LC_MESSAGES/django.po").read_text(encoding="utf-8")
+    assert 'msgstr "Bienvenue dans notre boutique"' in french  # kept
+    assert 'msgid "Add"\nmsgstr "[fr] Add"' in french
+    assert '"Plural-Forms: nplurals=2; plural=(n > 1);\\n"' in french  # its own
+    assert 'msgstr[1] "[fr] Hello %(name)s, you have %(count)d new messages."\n\n' in french
+    assert "fuzzy" not in french
+    assert '"Last-Translator: Camille <camille@example.com>\\n"' in french
+    arabic = (locale / "ar/LC_MESSAGES/django.po").read_text(encoding="utf-8")
+    assert "French" not in arabic
+    assert '"Language: ar\\n"' in arabic
+    assert 'msgstr[5] "[ar] Hello' in arabic
+    notes = {str(unit.path): unit.note for batch in gateway.batches for unit in batch.units}
+    assert notes["Add"] == "Translators: the button that adds a product to the cart"
+    assert notes[str(KeyPath(("month name\x04May",)))] == "context: month name"
+
+
+async def test_a_gettext_template_gives_the_catalogs(mediator: Mediator, examples: Path) -> None:
+    po = examples / "gnu" / "po"
+
+    receipt = await mediator.send(GenerateLocalesCommand(TreeRequest(po), codes("de", "ja"), MODEL))
+
+    assert receipt.ok
+    german = (po / "de.po").read_text(encoding="utf-8")
+    assert 'msgstr "Unbenannte Notiz"' in german
+    assert 'msgid "Quit"\nmsgstr "[de] Quit"' in german
+    japanese = (po / "ja.po").read_text(encoding="utf-8")
+    assert japanese.startswith("# The notes app's messages.")
+    assert '"Plural-Forms: nplurals=1; plural=(0);\\n"' in japanese
+    assert 'msgstr[0] "[ja] %d notes"\n\n' in japanese
