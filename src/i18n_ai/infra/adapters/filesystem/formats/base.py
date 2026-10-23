@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from .....domain.exports.locale import LocaleFormat, SourceFile
+from .....domain.exports.locale import KeyPath, LocaleFormat, SourceFile
 
 
 class FileFormat(ABC):
@@ -19,8 +19,20 @@ class FileFormat(ABC):
         Raises `OSError`, or `ValueError` when it is not valid."""
         raise NotImplementedError
 
+    def notes(self, path: Path) -> dict[KeyPath, str]:
+        """What `path` says about its messages for their translators, by their path."""
+        return {}
+
     @abstractmethod
-    def write(self, path: Path, content: dict[str, Any], like: SourceFile, key: str | None) -> None:
+    def write(
+        self,
+        path: Path,
+        content: dict[str, Any],
+        like: SourceFile,
+        key: str | None,
+        locale: str | None = None,
+    ) -> None:
         """Write `content` to `path` as `like` is written. Under `key` when given: in the file
-        already at `path`, keeping its other keys, else in a new one."""
+        already at `path`, keeping its other keys, else in a new one. `locale` is the target's,
+        for a format that names it in the file."""
         raise NotImplementedError

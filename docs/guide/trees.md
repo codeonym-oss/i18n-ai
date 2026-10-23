@@ -31,7 +31,8 @@ messages/
 └── fr.json
 ```
 
-Point at `messages/en.json`, or at `messages`.
+Point at `messages/en.json`, or at `messages`. The names may share a prefix, as Flutter's do:
+`lib/l10n/app_en.arb` gives `app_fr.arb`.
 
 ## A bundle
 
@@ -51,6 +52,7 @@ their order and the file's style are kept.
 |---|---|---|
 | JSON | `.json` | i18next, next-intl, vue-i18n, ngx-translate, FormatJS |
 | YAML | `.yml`, `.yaml` | Rails, vue-i18n, Symfony, Hugo |
+| ARB | `.arb` | Flutter (`gen-l10n`, `intl`) |
 
 The format is told by the extension. A tree keeps to one: when the source mixes them
 (`en/app.json` beside `en/mail.yml`), `scan` and `generate` refuse it, and `--format` names the
@@ -65,6 +67,14 @@ en:
 ```
 
 Its targets are rooted at their own locale (`fr:` in `fr.yml`).
+
+An ARB file's messages are ICU MessageFormat, checked as such. Its `@@` entries describe the file
+and its `@key` entries describe a message for `gen-l10n`; neither is translated. A message's
+`description` is given to the model beside it, so that a short label (`Save`, `Post`) is
+translated in the sense its author meant. A target gets the
+source's `@@` entries, with `@@locale` set to its own locale, and no `@key` entry from the
+source, since `gen-l10n` reads them from the template only. The ones a target already has are
+kept. A new ARB locale is spelled with underscores, as Flutter's file names are: `app_pt_BR.arb`.
 
 ## The source locale
 

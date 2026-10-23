@@ -1,6 +1,6 @@
 import re
-from collections.abc import Iterator
-from dataclasses import dataclass
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..vo.key_path import KeyPath
@@ -17,10 +17,14 @@ def is_message(value: Any) -> bool:
 
 @dataclass(frozen=True)
 class LocaleDocument:
-    """One locale's messages from one file: an object, read from JSON or YAML, whose leaves are
-    mostly strings. How the file is written is the file's own business."""
+    """One locale's messages from one file: an object, read from JSON, YAML or ARB, whose leaves
+    are mostly strings. How the file is written is the file's own business.
+
+    `notes` are what the file says about a message for its translators, by its path: an ARB
+    message's `description`."""
 
     content: dict[str, Any]
+    notes: Mapping[KeyPath, str] = field(default_factory=dict)
 
     def leaves(self) -> Iterator[tuple[KeyPath, Any]]:
         """Every leaf, with its path, in document order."""

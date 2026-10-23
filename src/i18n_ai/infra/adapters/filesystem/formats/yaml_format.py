@@ -36,7 +36,14 @@ class YamlFormat(FileFormat):
         except YAMLError as error:
             raise ValueError(str(error).replace("\n", " ")) from error
 
-    def write(self, path: Path, content: dict[str, Any], like: SourceFile, key: str | None) -> None:
+    def write(
+        self,
+        path: Path,
+        content: dict[str, Any],
+        like: SourceFile,
+        key: str | None,
+        locale: str | None = None,
+    ) -> None:
         text, newline = read_text(like.path)
         yaml = _round_trip(text)
         source = yaml.load(text)

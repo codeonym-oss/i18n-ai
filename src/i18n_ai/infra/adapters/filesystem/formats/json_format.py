@@ -55,7 +55,14 @@ class JsonFormat(FileFormat):
         content, _ = read_json(path)
         return content
 
-    def write(self, path: Path, content: dict[str, Any], like: SourceFile, key: str | None) -> None:
+    def write(
+        self,
+        path: Path,
+        content: dict[str, Any],
+        like: SourceFile,
+        key: str | None,
+        locale: str | None = None,
+    ) -> None:
         try:
             _, style = read_json(like.path)
         except (OSError, ValueError):
