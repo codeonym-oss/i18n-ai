@@ -277,7 +277,7 @@ def test_the_presets_tree_is_the_first_choice(
     code, output = invoke("generate", "--dry-run", "--preset", "angular")
 
     assert code == 0, output
-    assert "Preset angular · --preset → src/locale (from angular.json)" in output
+    assert "Preset angular · --preset → src/locale (from angular.json)" in output.replace("\\", "/")
     tree = prompter.asked[0]
     assert tree.choices == ["src/locale", "\0other"]
     assert tree.default == "src/locale"

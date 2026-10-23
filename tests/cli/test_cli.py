@@ -244,6 +244,11 @@ def flat(output: str) -> str:
     return " ".join(output.split())
 
 
+def posix(output: str) -> str:
+    """The output with Windows' paths written as everywhere else."""
+    return output.replace("\\", "/")
+
+
 def test_scan_with_no_path_uses_the_projects_preset(
     examples: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -252,7 +257,7 @@ def test_scan_with_no_path_uses_the_projects_preset(
     code, output = invoke("scan", "-t", "fr")
 
     assert code == 0, output
-    assert "Preset flutter · flutter_localizations in pubspec.yaml → lib/l10n" in output
+    assert "Preset flutter · flutter_localizations in pubspec.yaml → lib/l10n" in posix(output)
     assert "(from l10n.yaml)" in output
     assert "Format    arb" in output
     assert "app_fr.arb" in output
@@ -305,7 +310,7 @@ def test_presets_lists_them_and_the_one_used_here(
     assert code == 0
     assert "rails ●" in output
     assert "config/locales/<lng>.yml" in output
-    assert "Here: Preset rails · rails in Gemfile → config/locales" in output
+    assert "Here: Preset rails · rails in Gemfile → config/locales" in posix(output)
 
     monkeypatch.chdir(examples / "bundle")
     code, output = invoke("presets")
