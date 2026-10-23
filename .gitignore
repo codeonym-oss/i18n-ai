@@ -228,3 +228,6 @@ __marimo__/
 # Local tool state
 .ruff_cache/
 .import_linter_cache/
+
+# groundwork planning, personal
+planning/
