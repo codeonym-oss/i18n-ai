@@ -1,5 +1,5 @@
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Any
@@ -10,6 +10,9 @@ from ..placeholders.tokens import PlaceholderStyle
 from ..vo.key_path import KeyPath
 from ..vo.locale_code import CARDINAL, ORDINAL, LocaleCode, PluralKind
 
+_ORDER = ("zero", "one", "two", "few", "many", "other")  # CLDR's
+_CATEGORIES = frozenset(_ORDER)
+
 # i18next's plural keys: `item_one`, `item_other`, `place_ordinal_two`.
 _PLURAL_KEY = re.compile(
     r"^(?P<base>.+?)_(?:(?P<ordinal>ordinal)_)?(?P<category>zero|one|two|few|many|other)$"
@@ -18,7 +21,7 @@ _PLURAL_KEY = re.compile(
 
 @dataclass(frozen=True)
 class PluralForm:
-    """A unit that is one form of an i18next plural: the `category` it is for in the target,
+    """A unit that is one form of a plural: the `category` it is for in the target,
     and the source form it is translated from, the same category or else `other`."""
 
     kind: PluralKind
@@ -56,7 +59,8 @@ class LocaleSchema:
     """The shape a target locale's version of a document must have: the source's keys, in the
     source's order, with its numbers, booleans and empty strings as they are, and a slot for
     each message. A plural family gets the target's plural categories, so `item_one` and
-    `item_other` in English become six keys in Arabic and one in Japanese.
+    `item_other` in English become six keys in Arabic and one in Japanese; so does a nested one,
+    Rails' `item: {one: ..., other: ...}`.
 
     `quotes` says the document is ICU MessageFormat, where an apostrophe can quote."""
 
@@ -108,6 +112,10 @@ class _Builder:
 
     def node(self, value: Any, path: KeyPath) -> Any:
         if isinstance(value, dict):
+            if _is_nested_family(value):
+                # Rails keeps a `zero` the language has not: it is what a count of 0 shows
+                keep = ("zero",) if "zero" in value else ()
+                return self.family(value, CARDINAL, path, str, keep)
             return self.object(value, path)
         if isinstance(value, list):
             return [self.node(item, path.child(index)) for index, item in enumerate(value)]
@@ -130,16 +138,29 @@ class _Builder:
             # A family is laid out where its first form was, with the target's categories
             done.add(family)
             base, kind = family
-            forms = families[family]
+            forms = {category: node[key] for category, key in families[family].items()}
             prefix = f"{base}_ordinal_" if kind == ORDINAL else f"{base}_"
-            for category in self.target.plural_categories(kind):
-                source_category = category if category in forms else "other"
-                text = node[forms[source_category]]
-                target_key = prefix + category
-                form = PluralForm(kind, category, source_category)
-                rendered[target_key] = (
-                    self.slot(path.child(target_key), text, form) if is_message(text) else text
-                )
+            rendered |= self.family(forms, kind, path, prefix.__add__)
+        return rendered
+
+    def family(
+        self,
+        forms: dict[str, Any],
+        kind: PluralKind,
+        path: KeyPath,
+        key_of: Callable[[str], str],
+        keep: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
+        """A plural family's forms, by category, under the target's categories (and `keep`),
+        each translated from the source's own form or else from `other`."""
+        wanted = set(self.target.plural_categories(kind)) | set(keep)
+        rendered: dict[str, Any] = {}
+        for category in (category for category in _ORDER if category in wanted):
+            source_category = category if category in forms else "other"
+            text = forms[source_category]
+            key = key_of(category)
+            form = PluralForm(kind, category, source_category)
+            rendered[key] = self.slot(path.child(key), text, form) if is_message(text) else text
         return rendered
 
     def slot(self, path: KeyPath, text: str, plural: PluralForm | None) -> Slot:
@@ -167,6 +188,16 @@ def _families(node: dict[str, Any]) -> dict[tuple[str, PluralKind], dict[str, st
     return {
         family: forms for family, forms in families.items() if "other" in forms and len(forms) >= 2
     }
+
+
+def _is_nested_family(node: dict[str, Any]) -> bool:
+    """A plural family as its own object: two forms or more, `other` among them, each a string,
+    and nothing else."""
+    return (
+        len(node) >= 2
+        and "other" in node
+        and all(key in _CATEGORIES and isinstance(value, str) for key, value in node.items())
+    )
 
 
 def _render(node: Any, translations: Mapping[str, str]) -> Any:

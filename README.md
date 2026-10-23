@@ -95,8 +95,9 @@ Exit codes: 0 done, 1 something was not written (or nothing qualified, or you de
    they are for ("sign-in screens"), which the translators get as context.
 3. **Extract the schema**: the target's shape. Keys and order are the source's, and numbers,
    booleans and empty strings are copied. A slot is made for each message, with the
-   placeholders it must keep. i18next plural families take the **target's** CLDR categories:
-   `item_one`/`item_other` becomes six keys in Arabic and one in Japanese.
+   placeholders it must keep. Plural families take the **target's** CLDR categories: i18next's
+   `item_one`/`item_other`, or Rails' nested `item: {one:, other:}`, becomes six forms in Arabic
+   and one in Japanese.
 4. **Translate** in batches, at most `--concurrency` calls at once across all agents.
 5. **Validate** each answer, and send the rejected ones back with their problems.
 6. **Assemble** the document. A message that never passed keeps its source text, and is reported
@@ -115,7 +116,7 @@ A translation is **rejected** when it:
 - hides an argument behind an ICU apostrophe (`l'{count}`); the model is told to write `’` instead.
 
 It is **kept, with a warning**, when an ICU plural lacks some of the target's categories, or a
-message is left as in the source. An i18next plural form may show the count or not (Russian's
+message is left as in the source. A plural form may show the count or not (Russian's
 `one` is also 21, English's is not). Leading and trailing whitespace is copied from the source.
 
 ## Architecture

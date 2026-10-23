@@ -20,6 +20,8 @@ from .base import FileFormat
 
 # A key that opens a block: `key:`, nothing after it but a comment.
 _OPENER = re.compile(r"^[^\s#-][^#]*:\s*(#.*)?$")
+# A plural form's key, Rails' `few` or i18next's `item_few`: its `other` is written alike.
+_FORM = re.compile(r"(^|_)(zero|one|two|few|many)$")
 
 
 class YamlFormat(FileFormat):
@@ -130,6 +132,9 @@ def _overlay(node: Any, value: Any) -> Any:
             if name in names:
                 node[names[name]] = _overlay(node[names[name]], item)
             else:
+                twin = node.get(_FORM.sub(r"\1other", name))
+                if isinstance(item, str) and isinstance(twin, ScalarString):
+                    item = type(twin)(item)
                 node.insert(index, name, item)
         return node
     if isinstance(value, list):

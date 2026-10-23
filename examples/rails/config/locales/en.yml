@@ -15,6 +15,10 @@ en:
     index:
       title: Users # the page's heading
       empty: 'No users yet. Invite someone!'
+      count:
+        zero: No users
+        one: "1 user"
+        other: "%{count} users"
     show:
       greeting: "Welcome back, %{name}!"
       bio: |

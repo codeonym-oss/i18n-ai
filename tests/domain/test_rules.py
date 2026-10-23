@@ -33,6 +33,10 @@ def test_a_plural_form_may_show_the_count_or_not() -> None:
     one = next(unit for unit in schema.units if str(unit.path) == "x_one")
     assert check(schema, one, "{{count}} файл") == []
 
+    schema = schema_of({"x": {"one": "1 file", "other": "%{count} files"}}, "ru")
+    one = next(unit for unit in schema.units if str(unit.path) == "x.one")
+    assert check(schema, one, "%{count} файл") == []
+
 
 def test_icu_must_keep_explicit_selectors() -> None:
     schema = schema_of({"m": "{n, plural, =0 {none} one {# file} other {# files}}"})

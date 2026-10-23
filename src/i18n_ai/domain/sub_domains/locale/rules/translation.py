@@ -41,8 +41,8 @@ class Violation:
 
 
 _WORD = re.compile(r"[^\W\d_]{3,}")
-# i18next's count placeholder: {{count}}, {{count, number}}
-_COUNT = re.compile(r"^\{\{?count(?:,[^}]*)?\}\}?$")
+# The count placeholder: i18next's {{count}}, {{count, number}}, Rails' %{count}
+_COUNT = re.compile(r"^(?:\{\{?count(?:,[^}]*)?\}\}?|%\{count\})$")
 
 
 def normalize(unit: SourceUnit, text: str) -> str:

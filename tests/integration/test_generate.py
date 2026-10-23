@@ -196,6 +196,26 @@ async def test_a_rails_tree_keeps_its_comments_and_its_root(
     assert "  # The settings page\n" in french
     assert "      - :year\n" in french  # a symbol, not text
     assert "    per_page: 25\n" in french
+    assert "        zero: '[fr] No users'\n" in french  # Rails' zero, kept
+    assert '        one: "[fr] 1 user"\n        many: "[fr] %{count} users"\n' in french  # as other
+
+
+async def test_a_rails_plural_takes_the_targets_forms(mediator: Mediator, examples: Path) -> None:
+    locales = examples / "rails" / "config" / "locales"
+
+    receipt = await mediator.send(GenerateLocalesCommand(TreeRequest(locales), codes("ar"), MODEL))
+
+    assert receipt.ok
+    arabic = (locales / "ar.yml").read_text(encoding="utf-8")
+    assert (
+        "      count:\n"
+        "        zero: '[ar] No users'\n"
+        '        one: "[ar] 1 user"\n'
+        '        two: "[ar] %{count} users"\n'
+        '        few: "[ar] %{count} users"\n'
+        '        many: "[ar] %{count} users"\n'
+        '        other: "[ar] %{count} users"\n'
+    ) in arabic
 
 
 async def test_a_rooted_target_keeps_its_good_translations(
