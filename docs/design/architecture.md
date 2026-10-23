@@ -45,8 +45,9 @@ src/i18n_ai/
 │   ├── intents/       locale: ScanLocaleTreeQuery, GenerateLocalesCommand
 │   │                  provider: ListProvidersQuery, GetProviderStatusQuery, InstallProviderCommand
 │   └── exports/
-├── infra/adapters/    filesystem · langchain (catalog, chat models) · langgraph (run graph, atom,
-│                      gateway, prompts) · packages (uv / pip) · console (progress)
+├── infra/adapters/    filesystem (scanner, store, formats: JSON, YAML) · langchain (catalog, chat
+│                      models) · langgraph (run graph, atom, gateway, prompts) · packages (uv /
+│                      pip) · console (progress) · keyring
 ├── di/                platform providers · messaging (mediator, scanned) · container · bootstrap
 ├── runtime/           settings, from the environment and .env
 └── cli/               Typer: handlers, rendering, the runner
@@ -67,5 +68,8 @@ application import no I/O library, and the CLI reaches the adapters only through
   local one.
 - **The model is an adapter.** The application asks an `ITranslationEngine` for events; LangGraph
   and LangChain live behind it, and tests replace the gateway with a fake.
+- **A format is an adapter.** The domain works on a document of keys and messages, whatever file
+  it came from. Each format reads its files into one, and writes a target the way its source is
+  written; a new format is a `FileFormat` adapter and a member of `LocaleFormat`.
 - **Providers are data.** The list comes from LangChain's own table, so a provider it adds works
   without a release of i18n-ai.

@@ -16,8 +16,10 @@ i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clin
   offers CLDR's locales to pick, lists the providers and each one's models from its API, and
   asks for a missing API key, hidden. It ends with the command that repeats the run, for CI.
 - **Any tree.** A directory per locale (`locales/en/**/*.json`), a file per locale
-  (`messages/en.json`), or one bundle holding them all (`{"en": {...}, "fr": {...}}`). The
-  targets are written beside the source, in its JSON style (indent, final newline, UTF-8).
+  (`messages/en.json`, Rails' `config/locales/en.yml`), or one bundle holding them all
+  (`{"en": {...}, "fr": {...}}`). The targets are written beside the source, the way it is
+  written (indent, line endings, UTF-8).
+- **JSON and YAML.** YAML targets keep the source's comments, key order and quoting.
 - **A precheck first.** The tree, its source files and whether each qualifies, and what each target
   needs, shown before anything is sent to a model, for you to confirm.
 - **Parallel agents.** LangGraph classifies every file in parallel, then runs one agent per
@@ -88,7 +90,7 @@ Exit codes: 0 done, 1 something was not written (or nothing qualified, or you de
 ```
 
 1. **Precheck** (`scan`): finds the layout and the source, reads every source file, and *qualifies*
-   it: a JSON object whose values are mostly text. Config and data files are ignored.
+   it: an object whose values are mostly text. Config and data files are ignored.
 2. **Classify**: the model confirms each qualifying file holds user-facing messages, and says what
    they are for ("sign-in screens"), which the translators get as context.
 3. **Extract the schema**: the target's shape. Keys and order are the source's, and numbers,
