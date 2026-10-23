@@ -12,7 +12,9 @@ A translation is rejected when it:
 - loses, adds or alters a placeholder, counted as often as it appears;
 - breaks ICU MessageFormat, drops a plural's explicit selector (`=0`), changes a select's options,
   or changes the placeholders inside a plural's or select's branches;
-- hides an argument behind an ICU apostrophe (`l'{count}`); the model is told to write `’`.
+- hides an argument behind an ICU apostrophe (`l'{count}`); the model is told to write `’`;
+- in Laravel's locales, gives a pipe plural another number of forms than the target's
+  (`pipe-forms`), or changes the ranges of its forms (`pipe-ranges`).
 
 The placeholders it knows:
 
@@ -26,6 +28,7 @@ The placeholders it knows:
 | `@:key`, `@.lower:key` | vue-i18n linked messages |
 | `<b>`, `</b>`, `<0/>`, `<br/>` | HTML and component tags (Trans, rich text) |
 | `<x1/>`, `<g2>…</g2>` | XLIFF's inline elements, as i18n-ai numbers them |
+| `:name`, `:Name`, `:NAME` | Laravel, in its own locales only; the case may change |
 
 ## Kept, with a warning
 
@@ -44,6 +47,11 @@ shows it for a count of 0. Rails itself reads only `zero`, `one` and `other`; th
 default. A category the source lacks is translated from its `other` form. A form
 may show the count or not: Russian's `one` is also 21, so it needs `{{count}}` (or `%{count}`)
 where English's does not.
+
+A Laravel pipe plural (`one apple|:count apples`) is one message whose forms the target's are:
+as many as Laravel's own table gives the language, each told to the model by the counts it is
+for. Its placeholders are compared over the whole message: each of the source's is in one form
+or more, and none is new. See [Your framework](frameworks.md#laravel).
 
 ## Whitespace
 
