@@ -305,3 +305,54 @@ async def test_a_gettext_template_gives_the_catalogs(mediator: Mediator, example
     assert japanese.startswith("# The notes app's messages.")
     assert '"Plural-Forms: nplurals=1; plural=(0);\\n"' in japanese
     assert 'msgstr[0] "[ja] %d notes"\n\n' in japanese
+
+
+async def test_an_angular_template_gives_the_translations(
+    mediator: Mediator, examples: Path, gateway: FakeGateway
+) -> None:
+    locale = examples / "angular" / "src" / "locale"
+
+    receipt = await mediator.send(
+        GenerateLocalesCommand(TreeRequest(locale / "messages.xlf"), codes("fr", "ar"), MODEL)
+    )
+
+    assert receipt.ok
+    french = (locale / "messages.fr.xlf").read_text(encoding="utf-8")
+    assert "<target>Bonjour i18n !</target>" in french  # kept as it was
+    assert '<target>Vous avez <x id="START_BOLD_TEXT"' in french  # its tags moved
+    assert '<trans-unit id="minutes" datatype="html">' in french  # added
+    arabic = (locale / "messages.ar.xlf").read_text(encoding="utf-8")
+    assert 'target-language="ar"' in arabic
+    assert (
+        '<target state="translated">[ar] Welcome back, '
+        '<x id="INTERPOLATION" equiv-text="{{ user.name }}"/>! You have '
+        '<x id="START_BOLD_TEXT" ctype="x-b" equiv-text="&lt;b&gt;"/>new mail'
+    ) in arabic
+    assert '<context context-type="linenumber">10</context>' in arabic
+    notes = {str(unit.path): unit.note for batch in gateway.batches for unit in batch.units}
+    assert notes["greeting"] == "tags: <x1/> is {{ user.name }}, <x2/> is <b>, <x3/> is </b>"
+    assert notes["introductionHeader"] == (
+        "description: An introduction header for this sample; meaning: User welcome"
+    )
+
+
+async def test_a_symfony_locale_holds_its_text_in_its_targets(
+    mediator: Mediator, examples: Path, gateway: FakeGateway
+) -> None:
+    translations = examples / "symfony" / "translations"
+
+    receipt = await mediator.send(
+        GenerateLocalesCommand(
+            TreeRequest(translations / "messages+intl-icu.en.xlf"), codes("de"), MODEL
+        )
+    )
+
+    assert receipt.ok
+    german = (translations / "messages+intl-icu.de.xlf").read_text(encoding="utf-8")
+    assert german.startswith('<?xml version="1.0" encoding="UTF-8"?>\n<xliff')
+    assert 'target-language="de"' in german
+    assert (
+        '<source>cart.empty</source>\n        <target state="translated">[de] Your cart is empty.'
+    ) in german
+    notes = {str(unit.path): unit.note for batch in gateway.batches for unit in batch.units}
+    assert notes["Bt8LvVd"] == "key: cart.empty"

@@ -7,12 +7,14 @@ class LocaleFormat(StrEnum):
     - `json`: `.json`, for i18next, next-intl, vue-i18n, ngx-translate...
     - `yaml`: `.yml` and `.yaml`, for Rails, vue-i18n, Symfony, Hugo...
     - `arb`: `.arb`, Flutter's Application Resource Bundle
-    - `po`: `.po`, gettext's catalogs, and `.pot`, their templates (Django, WordPress, Babel...)"""
+    - `po`: `.po`, gettext's catalogs, and `.pot`, their templates (Django, WordPress, Babel...)
+    - `xliff`: `.xlf` and `.xliff`, XLIFF 1.2 and 2.0 (Angular, Symfony, translation tools)"""
 
     JSON = "json"
     YAML = "yaml"
     ARB = "arb"
     PO = "po"
+    XLIFF = "xliff"
 
     @property
     def locale_separator(self) -> str:

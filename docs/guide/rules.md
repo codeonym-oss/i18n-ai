@@ -25,6 +25,7 @@ The placeholders it knows:
 | `$t(key)` | i18next nesting |
 | `@:key`, `@.lower:key` | vue-i18n linked messages |
 | `<b>`, `</b>`, `<0/>`, `<br/>` | HTML and component tags (Trans, rich text) |
+| `<x1/>`, `<g2>…</g2>` | XLIFF's inline elements, as i18n-ai numbers them |
 
 ## Kept, with a warning
 

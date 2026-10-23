@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file source-language="en" target-language="en" datatype="plaintext" original="file.ext">
+    <header>
+      <tool tool-id="symfony" tool-name="Symfony"/>
+    </header>
+    <body>
+      <trans-unit id="Bt8LvVd" resname="cart.empty">
+        <source>cart.empty</source>
+        <target>Your cart is empty.</target>
+      </trans-unit>
+      <trans-unit id="kQx2Ja1" resname="cart.items">
+        <source>cart.items</source>
+        <target>{count, plural, one {# item} other {# items}} in your cart</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

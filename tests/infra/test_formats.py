@@ -10,6 +10,7 @@ from i18n_ai.domain.exports.locale import KeyPath, SourceFile
 from i18n_ai.infra.adapters.filesystem.formats import FORMATS, format_of, load_document
 from i18n_ai.infra.adapters.filesystem.formats.arb_format import ArbFormat
 from i18n_ai.infra.adapters.filesystem.formats.po_format import PoFormat
+from i18n_ai.infra.adapters.filesystem.formats.xliff_format import XliffFormat
 from i18n_ai.infra.adapters.filesystem.formats.yaml_format import YamlFormat
 
 yaml = YamlFormat()
@@ -410,11 +411,149 @@ def test_invalid_po_says_why(tmp_path: Path) -> None:
     assert error.startswith("not valid PO: ")
 
 
+xliff = XliffFormat()
+
+HI = (
+    'Hi <ph id="0" disp="{{ name }}"/>, see <pc id="1" dispStart="&lt;a&gt;" dispEnd="&lt;/a&gt;">'
+    'the <pc id="2">news</pc></pc> &amp; more.'
+)
+XLIFF_2 = f"""<?xml version='1.0' encoding='utf-8'?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="en">
+  <!-- exported -->
+  <file id="f">
+    <unit id="hi" name="home.hi">
+      <notes>
+        <note category="description">On the home page</note>
+        <note category="location">home.html:3</note>
+      </notes>
+      <segment>
+        <source>{HI}</source>
+      </segment>
+    </unit>
+    <unit id="two">
+      <segment id="a"><source>One.</source><target>Un.</target></segment>
+      <segment id="b" state="initial"><source>Two.</source><target>Two.</target></segment>
+    </unit>
+    <unit id="code" translate="no"><segment><source>x</source></segment></unit>
+  </file>
+</xliff>
+"""
+
+
+def test_an_xliff_source_gives_its_tags_as_numbered_tags(tmp_path: Path) -> None:
+    path = source(tmp_path, XLIFF_2, "messages.xlf").path
+
+    assert xliff.read(path, source=True) == {
+        "hi": "Hi <x1/>, see <g2>the <g3>news</g3></g2> & more.",
+        "two#a": "Un.",  # a source locale's own text
+        "two#b": "Two.",
+    }
+    assert xliff.read(path) == {"two#a": "Un."}  # an initial target is no translation
+    assert xliff.notes(path) == {
+        KeyPath(("hi",)): (
+            "key: home.hi; description: On the home page; "
+            "tags: <x1/> is {{ name }}, <g2>…</g2> is <a>…</a>"
+        )
+    }
+
+
+def test_an_xliff_target_puts_the_tags_back_wherever_they_went(tmp_path: Path) -> None:
+    like = source(tmp_path, XLIFF_2, "messages.xlf")
+    target = tmp_path / "messages.fr.xlf"
+
+    xliff.write(
+        target,
+        {"hi": "<g2><g3>Nouvelles</g3> & <g9>co</g9></g2> pour <x1/> </g2> <x2/>", "two#a": "Un."},
+        like,
+        None,
+        "fr",
+    )
+
+    written = target.read_text(encoding="utf-8")
+    assert written.startswith("<?xml version='1.0' encoding=\"UTF-8\"?>\n<xliff")
+    assert 'srcLang="en" trgLang="fr"' in written
+    assert "<!-- exported -->" in written
+    assert (
+        '<segment state="translated">\n        <source>Hi <ph id="0" disp="{{ name }}"/>, see'
+    ) in written
+    assert (
+        '<target><pc id="1" dispStart="&lt;a&gt;" dispEnd="&lt;/a&gt;"><pc id="2">Nouvelles</pc>'
+        ' &amp; &lt;g9&gt;co&lt;/g9&gt;</pc> pour <ph id="0" disp="{{ name }}"/> &lt;/g2&gt; '
+        "&lt;x2/&gt;</target>"
+    ) in written
+    assert '<segment id="b"><source>Two.</source></segment>' in written  # its target was English
+    assert xliff.read(target) == {
+        "hi": "<g2><g3>Nouvelles</g3> & <g9>co</g9></g2> pour <x1/> </g2> <x2/>",
+        "two#a": "Un.",
+    }
+
+
+XLIFF_1 = """<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="a.html" source-language="en"><body>
+    <trans-unit id="1"><source>A</source></trans-unit>
+    <trans-unit id="2"><source>B</source><seg-source>B</seg-source></trans-unit>
+  </body></file>
+  <file original="b.html" source-language="en"><body>
+    <trans-unit id="1"><source>C</source></trans-unit>
+  </body></file>
+</xliff>
+"""
+
+
+def test_an_existing_xliff_target_keeps_its_own_and_gets_the_new_units(tmp_path: Path) -> None:
+    like = source(tmp_path, XLIFF_1, "messages.xlf")
+    target = tmp_path / "messages.de.xlf"
+    target.write_bytes(
+        XLIFF_1.replace(
+            "<source>A</source>",
+            '<source>Old A</source><target state="final">Ä</target><note>kept</note>',
+        )
+        .replace(
+            '    <trans-unit id="2">',
+            '    <trans-unit id="0"><source>Z</source></trans-unit>\n    <trans-unit id="2">',
+        )
+        .replace("<source>C</source>", "<source>Y</source>")
+        .replace('trans-unit id="1"><source>Y', 'trans-unit id="9"><source>Y')
+        .replace("\n", "\r\n")
+        .encode()
+    )
+    assert xliff.read(target) == {"a.html/1": "Ä"}
+
+    xliff.write(target, {"a.html/1": "Ä", "a.html/2": "Bb", "b.html/1": "Cc"}, like, None, "de")
+
+    written = target.read_bytes().decode()
+    assert "\r\n" in written
+    assert written.startswith("<xliff")
+    assert '<source>Old A</source><target state="final">Ä</target><note>kept</note>' in written
+    assert (
+        '<seg-source>B</seg-source>\r\n    <target state="translated">Bb</target>' not in written
+    )  # one line: its unit was
+    assert '<source>B</source><seg-source>B</seg-source><target state="translated">Bb</target>' in (
+        written
+    )
+    assert (
+        '<body>\r\n    <trans-unit id="1"><source>C</source><target state="translated">Cc</target>'
+        '</trans-unit>\r\n    <trans-unit id="9">'
+    ) in written
+    assert written.count('target-language="de"') == 2
+    assert written.index('id="0"') < written.index('id="2"')
+
+
+def test_a_file_that_is_not_xliff_says_why(tmp_path: Path) -> None:
+    for text, why in (("<html/>", "its root is <html>"), ("<xliff>", "not valid XLIFF: ")):
+        document, error = load_document(source(tmp_path, text, "en.xlf").path, xliff)
+
+        assert document is None
+        assert error is not None
+        assert why in error
+
+
 def test_formats_by_extension() -> None:
     assert format_of(Path("a.YAML")) is FORMATS[yaml.format]
     assert format_of(Path("a.json")) is not None
     assert format_of(Path("app_en.arb")) is FORMATS[arb.format]
     assert format_of(Path("django.po")) is format_of(Path("messages.POT")) is FORMATS[po.format]
+    assert format_of(Path("messages.fr.XLIFF")) is FORMATS[xliff.format]
     assert format_of(Path("a.properties")) is None
 
 
