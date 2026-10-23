@@ -10,7 +10,9 @@ class TreeRequest:
     """Where to find a locale tree: a locale directory (`locales/en`), a locale file
     (`messages/en.json`), a bundle, or the directory that holds the locales, with the source
     named when the tree cannot tell it. `include` and `exclude` are globs over the source's
-    file names. `format` reads only that format's files; otherwise a tree must keep to one."""
+    file names. `format` reads only that format's files; otherwise a tree must keep to one,
+    unless it mixes the `preferred` format with others: its files alone are then read, and the
+    tree says which formats are left alone."""
 
     path: Path
     source: LocaleCode | None = None
@@ -18,6 +20,7 @@ class TreeRequest:
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
     format: LocaleFormat | None = None
+    preferred: LocaleFormat | None = None
 
 
 @dataclass(frozen=True)

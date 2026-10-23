@@ -307,3 +307,24 @@ async def test_an_xliff_template_names_its_translations_as_angular_does(tmp_path
         tmp_path / "messages.pt-BR.xlf"
     )
     assert await FileSystemLocaleTreeScanner().scan(TreeRequest(template)) == tree
+
+
+async def test_a_preferred_format_is_read_alone_in_a_mixed_tree(tmp_path: Path) -> None:
+    (tmp_path / "en").mkdir()
+    (tmp_path / "en/app.json").write_text('{"a": "A"}')
+    (tmp_path / "en/mail.yml").write_text("b: B\n")
+    (tmp_path / "fr.json").write_text("{}")
+    (tmp_path / "de.yml").write_text("{}")
+    scanner = FileSystemLocaleTreeScanner()
+
+    tree = await scanner.scan(TreeRequest(tmp_path / "en", preferred=LocaleFormat.YAML))
+    assert [str(file.name) for file in tree.files] == ["mail.yml"]
+    assert (tree.format, tree.left_alone) == (LocaleFormat.YAML, (LocaleFormat.JSON,))
+
+    (tmp_path / "en").rename(tmp_path / "source")
+    tree = await scanner.scan(TreeRequest(tmp_path, preferred=LocaleFormat.JSON))
+    assert (tree.source.value, tree.existing) == ("fr", ())  # de.yml left alone
+    assert tree.left_alone == (LocaleFormat.YAML,)
+
+    with pytest.raises(MixedLocaleFormats):
+        await scanner.scan(TreeRequest(tmp_path, preferred=LocaleFormat.ARB))

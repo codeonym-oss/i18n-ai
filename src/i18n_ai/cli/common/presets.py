@@ -13,17 +13,18 @@ from ..rendering import describe, shown
 async def with_preset(
     mediator: Mediator, console: Console, request: TreeRequest, named: str | None, given: bool
 ) -> tuple[TreeRequest, PresetMatch | None]:
-    """The request with the project's preset applied, and the preset, said: its format, unless
-    one is asked, and its locales' directory, unless a path is `given`. The preset is the one
-    `named`, else the one detected when no path is given."""
+    """The request with the project's preset applied, and the preset, said: its locales'
+    directory, unless a path is `given`, and its format, read alone when the tree mixes it
+    with others (which the scan then says). The preset is the one `named`, else the one
+    detected when no path is given."""
     if given and named is None:
         return request, None
     match = await mediator.send(DetectPresetQuery(Path.cwd(), named))
     if match is None:
         return request, None
     console.print(describe(match))
-    if request.format is None and match.preset.format is not None:
-        request = dataclasses.replace(request, format=LocaleFormat(match.preset.format))
+    if match.preset.format is not None:
+        request = dataclasses.replace(request, preferred=LocaleFormat(match.preset.format))
     if not given and match.tree is not None:
         request = dataclasses.replace(request, path=match.tree)
     return request, match

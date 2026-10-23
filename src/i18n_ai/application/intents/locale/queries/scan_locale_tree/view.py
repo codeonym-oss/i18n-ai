@@ -51,6 +51,7 @@ class ScanReport:
     existing: tuple[str, ...]
     files: tuple[SourceFileView, ...]
     targets: tuple[TargetView, ...]
+    left_alone: tuple[str, ...] = ()
 
     @property
     def qualified(self) -> tuple[SourceFileView, ...]:

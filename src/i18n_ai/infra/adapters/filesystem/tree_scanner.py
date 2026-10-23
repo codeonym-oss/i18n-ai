@@ -137,7 +137,12 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
         )
 
     def _file_layout(
-        self, root: Path, path: Path, source: LocaleCode, request: TreeRequest
+        self,
+        root: Path,
+        path: Path,
+        source: LocaleCode,
+        request: TreeRequest,
+        left_alone: tuple[LocaleFormat, ...] = (),
     ) -> LocaleTree:
         adapter = format_of(path)
         assert adapter is not None
@@ -153,6 +158,7 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             output=_output(request, root),
             format=adapter.format,
             prefix=prefix,
+            left_alone=left_alone,
         )
 
     # A gettext tree without its source locale
@@ -259,13 +265,17 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             named = _named(child.stem, None)
             if named is not None:
                 by_locale.setdefault(named[1].value, child)  # unprefixed first: `en` < `app_en`
-        _one_format(path, list(by_locale.values()))
+        found, left_alone = _one_format(path, list(by_locale.values()), request.preferred)
+        if left_alone:
+            by_locale = {
+                code: file for code, file in by_locale.items() if _format_of(file) == found
+            }
         locale_files = _locales(by_locale)
         if templates and not _has(locale_files, wanted):
             return self._template_files(path, templates[0], wanted, request)
         if locale_files:
             source = _choose_source(str(path), locale_files, request.source)
-            return self._file_layout(path, by_locale[source.value], source, request)
+            return self._file_layout(path, by_locale[source.value], source, request, left_alone)
 
         raise LocaleTreeNotFound(
             str(path), "it holds no locale directory (en/) and no locale file (en.json, en.yml)"
@@ -287,7 +297,10 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             if _selected(str(name), request.include, request.exclude):
                 paths.append(path)
                 names.append(name)
-        found = _one_format(directory, paths)
+        found, left_alone = _one_format(directory, paths, request.preferred)
+        if left_alone:
+            kept = [index for index, path in enumerate(paths) if _format_of(path) == found]
+            paths, names = [paths[index] for index in kept], [names[index] for index in kept]
         files = []
         for name, path in zip(names, paths, strict=True):
             adapter = format_of(path)
@@ -302,6 +315,7 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             existing=_locales(siblings),
             output=_output(request, root),
             format=found or request.format or LocaleFormat.JSON,
+            left_alone=left_alone,
         )
 
 
@@ -340,12 +354,22 @@ def _source_file(
     return SourceFile(name, path, document, error)
 
 
-def _one_format(path: Path, files: list[Path]) -> LocaleFormat | None:
-    """The format of `files`, or None for no file. Raises `MixedLocaleFormats` for several."""
-    formats = sorted({adapter.format for file in files if (adapter := format_of(file))})
-    if len(formats) > 1:
-        raise MixedLocaleFormats(str(path), [format.value for format in formats])
-    return formats[0] if formats else None
+def _one_format(
+    path: Path, files: list[Path], preferred: LocaleFormat | None
+) -> tuple[LocaleFormat | None, tuple[LocaleFormat, ...]]:
+    """The format of `files`, or None for no file, and the others they are in: none, unless
+    they mix the `preferred` one with others. Raises `MixedLocaleFormats` for several else."""
+    formats = sorted({found for file in files if (found := _format_of(file)) is not None})
+    if len(formats) <= 1:
+        return (formats[0] if formats else None), ()
+    if preferred in formats:
+        return preferred, tuple(found for found in formats if found != preferred)
+    raise MixedLocaleFormats(str(path), [format.value for format in formats])
+
+
+def _format_of(path: Path) -> LocaleFormat | None:
+    adapter = format_of(path)
+    return adapter.format if adapter is not None else None
 
 
 def _tree_in(directory: Path, children: list[Path]) -> TreeCandidate | None:

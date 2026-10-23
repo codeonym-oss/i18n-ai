@@ -79,4 +79,5 @@ class ScanLocaleTreeQueryHandler(QueryHandler[ScanLocaleTreeQuery, ScanReport]):
             existing=tuple(locale.value for locale in tree.existing),
             files=tuple(files),
             targets=tuple(views),
+            left_alone=tuple(format.value for format in tree.left_alone),
         )

@@ -21,7 +21,7 @@ needs. Nothing is sent to a model. With no `PATH`, the tree is where the project
 | `-o, --output` | Where the targets go. Default: beside the source. |
 | `--include`, `--exclude` | Globs over the source's file names; repeat them. |
 | `-f, --format` | `json`, `yaml`, `arb`, `po` or `xliff`: read only that format's files, when the tree mixes several. |
-| `--preset` | The project's i18n library, in place of the one detected: where its locales are, and their format. |
+| `--preset` | The project's i18n library, in place of the one detected: where its locales are, and the format read when they mix several, the others named as left alone. |
 
 ## `i18n-ai generate [PATH]`
 

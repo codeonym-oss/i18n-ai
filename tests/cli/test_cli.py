@@ -273,8 +273,18 @@ def test_a_named_preset_overrides_the_detected_one(
 
     assert code == 0, output
     assert "Preset rails · --preset" in output
-    assert "Format    yaml" in output  # the preset's
+    assert "Format    yaml (the preset's; the json files are left alone, --format chooses)" in (
+        output
+    )
     assert "extra.yml" in output
+    assert "common.json" not in output
+
+    (examples / "i18next/locales/en/extra.yml").unlink()
+    code, output = invoke("scan", "locales/en", "--preset", "rails")
+
+    assert code == 0, output
+    assert "Format    json" in output  # the tree's only one, whatever the preset's
+    assert "left alone" not in output
 
     code, output = invoke("scan", "--preset", "nope")
 

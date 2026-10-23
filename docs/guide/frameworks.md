@@ -50,7 +50,18 @@ i18n-ai scan --preset vue-i18n
 i18n-ai generate locales -t de --preset rails
 ```
 
-When a path is also given, the path is the tree, and the preset sets only its format.
+When a path is also given, the path is the tree.
+
+A preset's format matters only when its tree mixes formats, as `config/locales` holding
+`en.yml` beside `en.json`. Without a preset, `scan` and `generate` refuse such a tree until
+`--format` names one. With a preset, its own format is read, and the scan's `Format` line names
+the formats left alone:
+
+```text
+Format    yaml (the preset's; the json files are left alone, --format chooses)
+```
+
+A tree in one format is read in it, whatever the preset's.
 
 At a terminal, the interactive mode lists the preset's locale directory first, as the default
 answer. You can pick another tree, which is then read in its own format.
