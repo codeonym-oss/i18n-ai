@@ -52,7 +52,9 @@ def test_a_retry_carries_the_previous_answer_and_its_problems() -> None:
     schema = extract_schema(I18NEXT, LocaleCode("en"), LocaleCode("ru"))
     unit = schema.units[0]
 
-    prompt = translate_human(schema.units, {unit.id: "предмет"}, {unit.id: ["missing {{count}}"]})
+    prompt = translate_human(
+        schema.units, {unit.id: "предмет"}, {unit.id: ["missing {{count}}"]}, schema.target
+    )
 
     assert prompt.startswith("Your previous translations")
     sent = json.loads(prompt.split("```json\n")[1].split("\n```")[0])
@@ -71,7 +73,9 @@ def test_a_note_is_sent_with_its_message() -> None:
     schema = extract_schema(document, LocaleCode("en"), LocaleCode("fr"))
 
     system = translate_system(schema, "app_en.arb", None, None)
-    sent = json.loads(translate_human(schema.units, {}, {}).split("```json\n")[1].split("\n```")[0])
+    sent = json.loads(
+        translate_human(schema.units, {}, {}, schema.target).split("```json\n")[1].split("\n```")[0]
+    )
 
     assert "`note`" in system
     assert sent[0]["note"] == "Button that saves the profile"
@@ -97,3 +101,33 @@ def test_laravel_s_placeholders_are_explained_in_its_syntax_only() -> None:
     assert "`:name` placeholders" in prompt
     assert "`:Name` capitalized" in prompt
     assert ":Name" not in translate_system(extract_schema(document, en, de), "", None, None)
+
+
+def sent(schema) -> list[dict]:  # type: ignore[no-untyped-def,type-arg]
+    return json.loads(
+        translate_human(schema.units, {}, {}, schema.target).split("```json\n")[1].split("\n```")[0]
+    )
+
+
+def test_a_pipe_plural_is_sent_with_the_target_s_forms() -> None:
+    document = LocaleDocument({"apples": ":count apple|:count apples", "o": "{0} none|[1,*] some"})
+    en = LocaleCode("en")
+
+    russian = extract_schema(document, en, LocaleCode("ru"), MessageSyntax.LARAVEL)
+    apples, orders = sent(russian)
+
+    assert apples["pipe_forms"] == [
+        "1, 21, 31, 41, 51, 61, …",
+        "2, 3, 4, 22, 23, 24, …",
+        "0, 5, 6, 7, 8, 9, …",
+    ]
+    assert "keep_ranges" not in apples
+    assert orders["keep_ranges"] == ["{0}", "[1,*]"]
+    assert "pipe_forms" not in orders
+    assert "pipe plural" in translate_system(russian, "", None, None)
+
+    japanese = extract_schema(document, en, LocaleCode("ja"), MessageSyntax.LARAVEL)
+    assert sent(japanese)[0]["pipe_forms"] == ["every count"]
+    assert "pipe plural" not in translate_system(
+        extract_schema(document, en, LocaleCode("ru")), "", None, None
+    )

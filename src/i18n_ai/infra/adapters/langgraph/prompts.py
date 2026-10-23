@@ -12,6 +12,7 @@ from ....domain.exports.locale import (
     LocaleSchema,
     PlaceholderStyle,
     SourceUnit,
+    laravel_forms,
 )
 
 _STYLES = {
@@ -97,6 +98,13 @@ def translate_system(
             f"the form that category needs in {target.display_name}; show the count with "
             "the source's count placeholder (`{{count}}`, `%{count}`) wherever that form needs it."
         )
+    if any(unit.signature.pipes is not None for unit in schema.units):
+        rules.append(
+            "A message with `pipe_forms` is a pipe plural: write it as that many forms, "
+            "separated by `|` with no space around it, each form for the counts listed. A message "
+            "with `keep_ranges` keeps its forms, each starting with its range as written (`{0}`, "
+            "`[1,*]`); translate only the text after it."
+        )
     if any(unit.note for unit in schema.units):
         rules.append(
             "A message's `note` is its author's description of it, for translators: use it to "
@@ -116,7 +124,10 @@ def translate_system(
 
 
 def translate_human(
-    units: Sequence[SourceUnit], previous: Mapping[str, str], problems: Mapping[str, list[str]]
+    units: Sequence[SourceUnit],
+    previous: Mapping[str, str],
+    problems: Mapping[str, list[str]],
+    target: LocaleCode,
 ) -> str:
     messages: list[dict[str, Any]] = []
     for unit in units:
@@ -127,6 +138,11 @@ def translate_human(
             message["plural"] = unit.plural.category
             if unit.plural.kind == ORDINAL:
                 message["ordinal"] = True
+        pipes = unit.signature.pipes
+        if pipes is not None and any(pipes.ranges):
+            message["keep_ranges"] = [found or "" for found in pipes.ranges]
+        elif pipes is not None:
+            message["pipe_forms"] = list(laravel_forms(target))
         placeholders = unit.signature.placeholders()
         if placeholders:
             message["placeholders"] = placeholders

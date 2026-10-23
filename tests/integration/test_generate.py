@@ -378,3 +378,21 @@ async def test_a_laravel_tree_is_generated_from_its_keys(examples: Path) -> None
     assert german["Welcome, :name!"] == "[de] Welcome, :name!"
     retried = [batch for batch in gateway.batches if batch.problems]
     assert "missing :name" in next(iter(retried[0].problems.values()))[0]
+
+
+async def test_a_laravel_tree_with_its_source_takes_the_target_s_forms(
+    mediator: Mediator, examples: Path
+) -> None:
+    lang = examples / "laravel" / "lang"
+    (lang / "en.json").write_text(
+        json.dumps({"apples": "One apple|:count apples", "o": "{0} None|[1,*] :count orders"})
+    )
+
+    receipt = await mediator.send(GenerateLocalesCommand(laravel(lang), codes("ru"), MODEL))
+
+    (result,) = receipt.results
+    assert result.status == ResultStatus.WRITTEN, result
+    russian = read(lang / "ru.json")
+    assert russian["apples"].count("|") == 2
+    assert russian["o"] == "{0}[ru] None|[1,*][ru] :count orders"
+    assert "fr.json" not in str(result.path)

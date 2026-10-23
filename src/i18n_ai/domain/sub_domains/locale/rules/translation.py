@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from ..entities.document import LocaleDocument
-from ..placeholders.signature import Branching, signature_of
+from ..placeholders.pipes import laravel_forms, split_pipes
+from ..placeholders.signature import Branching, Signature, signature_of
 from ..schema.extraction import LocaleSchema, SourceUnit
 from ..vo.key_path import KeyPath
 from ..vo.locale_code import CARDINAL, ORDINAL
@@ -28,6 +29,8 @@ class ViolationCode(StrEnum):
     PLURAL_SELECTORS = "plural-selectors"
     BRANCH_PLACEHOLDERS = "branch-placeholders"
     PLURAL_CATEGORIES = "plural-categories"
+    PIPE_FORMS = "pipe-forms"
+    PIPE_RANGES = "pipe-ranges"
     UNCHANGED = "unchanged"
 
 
@@ -74,9 +77,14 @@ def check(schema: LocaleSchema, unit: SourceUnit, text: str | None) -> list[Viol
         ]
 
     found: list[Violation] = []
-    # 1. Every placeholder, as often as in the source
+    # 1. Every placeholder, as often as in the source; in a pipe plural, whose forms are the
+    #    target's, in one form or more
     missing = source.counts() - translated.counts()
     extra = translated.counts() - source.counts()
+    if source.pipes is not None:
+        missing = Counter(set(source.tokens) - set(translated.tokens))
+        extra = Counter(set(translated.tokens) - set(source.tokens))
+        found.extend(_pipes(schema, unit, source, text))
     if unit.plural is not None:
         # A plural form may show the count or not: Russian's `one` is also 21, English's is not
         missing = Counter({token: n for token, n in missing.items() if not _COUNT.match(token)})
@@ -108,6 +116,30 @@ def check(schema: LocaleSchema, unit: SourceUnit, text: str | None) -> list[Viol
         found.append(violation(ViolationCode.UNCHANGED, "left as in the source", Severity.WARNING))
 
     return sorted(found, key=lambda item: item.severity != Severity.ERROR)
+
+
+def _pipes(schema: LocaleSchema, unit: SourceUnit, source: Signature, text: str) -> list[Violation]:
+    """A pipe plural's forms: the target's number of them, Laravel's, when the source's have no
+    range; else the source's, with their ranges at their places."""
+    assert source.pipes is not None
+    translated = split_pipes(text)
+    if any(source.pipes.ranges):
+        if translated.ranges == source.pipes.ranges:
+            return []
+        ranges = ", ".join(found or "(none)" for found in source.pipes.ranges)
+        message = f"keep the {len(source.pipes.ranges)} forms and their ranges: {ranges}"
+        return [Violation(unit.id, unit.path, ViolationCode.PIPE_RANGES, message)]
+    forms = laravel_forms(schema.target)
+    # Laravel trims a form with a range only: ` des pommes` would show its space
+    spaced = " |" in text or "| " in text
+    if len(translated.forms) == len(forms) and not any(translated.ranges) and not spaced:
+        return []
+    counts = "; ".join(f"form {index} for {served}" for index, served in enumerate(forms, start=1))
+    message = (
+        f"a {schema.target.value} pipe plural has {len(forms)} form(s), separated by '|' with no "
+        f"space around it: {counts}"
+    )
+    return [Violation(unit.id, unit.path, ViolationCode.PIPE_FORMS, message)]
 
 
 def _branching(

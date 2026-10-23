@@ -21,7 +21,7 @@ from i18n_ai.application.ports.provider import (
     ModelListing,
 )
 from i18n_ai.cli.interactive import Choice, Prompter
-from i18n_ai.domain.exports.locale import LocaleCode, SourceFile
+from i18n_ai.domain.exports.locale import LocaleCode, SourceFile, SourceUnit, laravel_forms
 from i18n_ai.infra.adapters.langchain import LangChainChatModels, LangChainProviderCatalog
 from i18n_ai.infra.adapters.langgraph import (
     BatchRequest,
@@ -48,14 +48,30 @@ class FakeGateway:
 
     async def translate(self, batch: BatchRequest) -> dict[str, str]:
         self.batches.append(batch)
-        target = batch.schema.target.value
         out: dict[str, str] = {}
         for unit in batch.units:
-            text = f"[{target}] {unit.source}"
+            text = _tagged(unit, batch.schema.target)
             if str(unit.path) in self.broken_first and unit.id not in batch.problems:
                 text = re.sub(r"\{\{[^}]*\}\}|(?<![A-Za-z0-9_]):[A-Za-z_][A-Za-z0-9_]*", "", text)
             out[unit.id] = text
         return out
+
+
+def _tagged(unit: SourceUnit, target: LocaleCode) -> str:
+    """The unit's source tagged with the target; a pipe plural in the target's shape, its
+    ranges first in their forms."""
+    pipes = unit.signature.pipes
+    if pipes is None:
+        return f"[{target}] {unit.source}"
+    if any(pipes.ranges):
+        forms = [
+            f"{found or ''}[{target}]{form}"
+            for found, form in zip(pipes.ranges, pipes.forms, strict=True)
+        ]
+    else:
+        count = len(laravel_forms(target))
+        forms = [f"[{target}] {pipes.forms[min(i, len(pipes.forms) - 1)]}" for i in range(count)]
+    return "|".join(forms)
 
 
 class InstalledCatalog(LangChainProviderCatalog):

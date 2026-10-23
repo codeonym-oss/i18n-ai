@@ -70,7 +70,11 @@ class LangChainGateway:
             SystemMessage(
                 prompts.translate_system(batch.schema, batch.file, batch.subject, batch.context)
             ),
-            HumanMessage(prompts.translate_human(batch.units, batch.previous, batch.problems)),
+            HumanMessage(
+                prompts.translate_human(
+                    batch.units, batch.previous, batch.problems, batch.schema.target
+                )
+            ),
         ]
         async with self._calls:
             answer = cast(TranslationBatch, await self._translator.ainvoke(messages))

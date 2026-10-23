@@ -10,9 +10,11 @@ from .exceptions import (
 from .placeholders import (
     Branching,
     IcuSyntaxError,
+    PipePlural,
     PlaceholderStyle,
     Signature,
     detect_styles,
+    laravel_forms,
     signature_of,
     uses_icu_quotes,
 )
@@ -61,6 +63,7 @@ __all__ = [
     "MessageSyntax",
     "MissingTranslations",
     "MixedLocaleFormats",
+    "PipePlural",
     "PlaceholderStyle",
     "PluralForm",
     "PluralKind",
@@ -86,6 +89,7 @@ __all__ = [
     "fallback",
     "is_message",
     "known_locales",
+    "laravel_forms",
     "normalize",
     "preset_named",
     "qualify",
