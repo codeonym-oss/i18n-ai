@@ -20,6 +20,8 @@ from i18n_ai.domain.exports.provider import ModelSpec
 from support.fakes import FakeGateway, FakeModel
 
 MODEL = ModelSpec("openai:fake-model")
+# A machine's translation, for review
+REVIEW = '<target state="needs-review-translation" state-qualifier="mt-suggestion">'
 
 
 @pytest.fixture
@@ -324,7 +326,7 @@ async def test_an_angular_template_gives_the_translations(
     arabic = (locale / "messages.ar.xlf").read_text(encoding="utf-8")
     assert 'target-language="ar"' in arabic
     assert (
-        '<target state="translated">[ar] Welcome back, '
+        REVIEW + "[ar] Welcome back, "
         '<x id="INTERPOLATION" equiv-text="{{ user.name }}"/>! You have '
         '<x id="START_BOLD_TEXT" ctype="x-b" equiv-text="&lt;b&gt;"/>new mail'
     ) in arabic
@@ -351,8 +353,6 @@ async def test_a_symfony_locale_holds_its_text_in_its_targets(
     german = (translations / "messages+intl-icu.de.xlf").read_text(encoding="utf-8")
     assert german.startswith('<?xml version="1.0" encoding="UTF-8"?>\n<xliff')
     assert 'target-language="de"' in german
-    assert (
-        '<source>cart.empty</source>\n        <target state="translated">[de] Your cart is empty.'
-    ) in german
+    assert ("<source>cart.empty</source>\n        " + REVIEW + "[de] Your cart is empty.") in german
     notes = {str(unit.path): unit.note for batch in gateway.batches for unit in batch.units}
     assert notes["Bt8LvVd"] == "key: cart.empty"

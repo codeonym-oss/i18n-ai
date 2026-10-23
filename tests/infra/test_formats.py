@@ -412,6 +412,8 @@ def test_invalid_po_says_why(tmp_path: Path) -> None:
 
 
 xliff = XliffFormat()
+# A machine's translation, for review
+REVIEW = '<target state="needs-review-translation" state-qualifier="mt-suggestion">'
 
 HI = (
     'Hi <ph id="0" disp="{{ name }}"/>, see <pc id="1" dispStart="&lt;a&gt;" dispEnd="&lt;/a&gt;">'
@@ -474,7 +476,8 @@ def test_an_xliff_target_puts_the_tags_back_wherever_they_went(tmp_path: Path) -
     assert 'srcLang="en" trgLang="fr"' in written
     assert "<!-- exported -->" in written
     assert (
-        '<segment state="translated">\n        <source>Hi <ph id="0" disp="{{ name }}"/>, see'
+        '<segment state="translated" subState="i18n-ai:mt">\n'
+        '        <source>Hi <ph id="0" disp="{{ name }}"/>, see'
     ) in written
     assert (
         '<target><pc id="1" dispStart="&lt;a&gt;" dispEnd="&lt;/a&gt;"><pc id="2">Nouvelles</pc>'
@@ -526,13 +529,12 @@ def test_an_existing_xliff_target_keeps_its_own_and_gets_the_new_units(tmp_path:
     assert written.startswith("<xliff")
     assert '<source>Old A</source><target state="final">Ä</target><note>kept</note>' in written
     assert (
-        '<seg-source>B</seg-source>\r\n    <target state="translated">Bb</target>' not in written
+        "<seg-source>B</seg-source>\r\n    " + REVIEW + "Bb</target>" not in written
     )  # one line: its unit was
-    assert '<source>B</source><seg-source>B</seg-source><target state="translated">Bb</target>' in (
-        written
-    )
+    assert "<source>B</source><seg-source>B</seg-source>" + REVIEW + "Bb</target>" in written
+    assert xliff.read(target)["a.html/2"] == "Bb"  # a translation to review is one
     assert (
-        '<body>\r\n    <trans-unit id="1"><source>C</source><target state="translated">Cc</target>'
+        '<body>\r\n    <trans-unit id="1"><source>C</source>' + REVIEW + "Cc</target>"
         '</trans-unit>\r\n    <trans-unit id="9">'
     ) in written
     assert written.count('target-language="de"') == 2

@@ -11,8 +11,9 @@ by its place in the source, so a translation may move it, and is written back as
 tag stands for, when the file says it (Angular's `equiv-text` and `disp`), is in the message's
 note, with its `<note>`s.
 
-A target is the source file with its `<target>`s filled, `state="translated"`, and its
-`target-language` (1.2) or `trgLang` (2.0) its own. An existing target keeps its own units and
+A target is the source file with its `<target>`s filled, each marked as a machine's, for a
+translator to review (see `_MACHINE_1`), and its `target-language` (1.2) or `trgLang` (2.0) its
+own. An existing target keeps its own units and
 what is around them, its translations as they are, and gets the source's new units and current
 `<source>`s."""
 
@@ -37,6 +38,11 @@ _TOKEN = re.compile(r"<(/?)([xg])(\d+)(/?)>")
 _PAIRED = frozenset({"g", "mrk", "pc"})
 # A target in these states is not a translation yet
 _UNTRANSLATED = frozenset({"new", "needs-translation", "initial"})
+# How a machine's translation is marked: 1.2 has a state for it to be reviewed, and a qualifier
+# for machine translation; 2.0's states have neither, so its `subState` says it, for the tools
+# that filter on it. A translation so marked is one: it is not translated again.
+_MACHINE_1 = {"state": "needs-review-translation", "state-qualifier": "mt-suggestion"}
+_MACHINE_2 = {"state": "translated", "subState": "i18n-ai:mt"}
 # Where 2.0's notes say where a message is used, which is no help to its translator
 _SKIPPED_NOTES = frozenset({"location"})
 
@@ -146,7 +152,9 @@ class XliffFormat(FileFormat):
             assert text is not None
             _replace(message.holder, message.source, copy.deepcopy(original.source))
             _fill(_target(message), value, _Table(original.source, text))
-            (message.holder if message.two else _target(message)).set("state", "translated")
+            marked = message.holder if message.two else _target(message)
+            for name, value in (_MACHINE_2 if message.two else _MACHINE_1).items():
+                marked.set(name, value)
 
         if locale is not None:
             if _two(root):

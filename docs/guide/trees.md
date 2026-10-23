@@ -121,8 +121,11 @@ its translation must keep, as it must any tag. A translation may move them; each
 back as its source has it, attributes and all. Its `<note>`s, what each tag stands for (its
 `equiv-text` or `disp`), and its Symfony key (`resname`) are the message's note.
 
-A target is the template with its `<target>`s filled and marked `state="translated"`, its
-`target-language` (`trgLang` in 2.0) its locale. An existing one keeps its own translations,
+A target is the template with its `<target>`s filled, its `target-language` (`trgLang` in 2.0)
+its locale. Each translation is marked as a machine's, for translation tools to put it up for
+review: `state="needs-review-translation" state-qualifier="mt-suggestion"` in XLIFF 1.2, and
+`state="translated" subState="i18n-ai:mt"` in 2.0, whose states have no such one. Angular and
+Symfony read a target whatever its state, and i18n-ai keeps it on the next run. An existing one keeps its own translations,
 units and notes, and gets the template's new units and current `<source>`s; a target still
 `new`, `needs-translation` or `initial` is translated again.
 
