@@ -4,13 +4,16 @@
 - a locale file, `messages/en.json`: the file layout, its siblings the other locales;
 - a bundle, `i18n.json` holding `{"en": {...}, "fr": {...}}`: the bundle layout;
 - the directory holding the locales, `locales/`: whichever of the first two it holds, with the
-  source named, or `en` when there is one, or the only locale."""
+  source named, or `en` when there is one, or the only locale.
+
+`detect` looks for those trees under a project, for the user to pick one."""
 
 import fnmatch
+from collections import deque
 from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
 
-from ....application.ports.locale import ILocaleTreeScanner, TreeRequest
+from ....application.ports.locale import ILocaleTreeScanner, TreeCandidate, TreeRequest
 from ....domain.exports.locale import (
     InvalidLocaleCode,
     LocaleCode,
@@ -26,6 +29,21 @@ from .json_io import load_document, read_json
 _SKIPPED = {"node_modules", "__pycache__", "dist", "build"}
 _DEFAULT_SOURCE = LocaleCode("en")
 
+# How far `detect` looks: the directories below the project's, and how many at most.
+_DETECT_DEPTH = 5
+_DETECT_DIRECTORIES = 5000
+_DETECT_SKIPPED = _SKIPPED | {"vendor", "venv", "target", "coverage", "out", "site-packages"}
+# A bundle is read whole to know it is one: bigger JSON files are not locales.
+_BUNDLE_BYTES = 2_000_000
+# CLDR knows many three-letter languages that are also directory names (`src`, `lib`...): only
+# these few are taken for locales when detecting.
+_DETECTED_THREE_LETTERS = {"ast", "chr", "ckb", "fil", "gsw", "haw", "kab", "yue"}
+# A lone locale is taken for a tree only in a directory named like one, or when it is English.
+_TREE_NAMES = {
+    "i18n", "intl", "l10n", "lang", "langs", "language", "languages", "locale", "locales",
+    "messages", "translations", "translation",
+}  # fmt: skip
+
 
 class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
     async def scan(self, request: TreeRequest) -> LocaleTree:
@@ -35,6 +53,37 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
         if path.is_file():
             return self._from_file(path, request)
         return self._from_directory(path, request)
+
+    async def detect(self, root: Path) -> list[TreeCandidate]:
+        return self._detect(root)
+
+    def _detect(self, root: Path) -> list[TreeCandidate]:
+        """Breadth first, so the shallowest trees come first; a tree's directories are not
+        looked into."""
+        queue = deque([(root.expanduser().resolve(), 0)])
+        found: list[TreeCandidate] = []
+        visited = 0
+        while queue and visited < _DETECT_DIRECTORIES:
+            directory, depth = queue.popleft()
+            visited += 1
+            try:
+                children = sorted(directory.iterdir())
+            except OSError:
+                continue
+            tree = _tree_in(directory, children)
+            found.extend(_bundles_in(children))
+            if tree is not None:
+                found.append(tree)
+                continue
+            if depth < _DETECT_DEPTH:
+                queue.extend(
+                    (child, depth + 1)
+                    for child in children
+                    if child.is_dir()
+                    and not child.name.startswith(".")
+                    and child.name not in _DETECT_SKIPPED
+                )
+        return found
 
     # The path is a file: a locale file, or a bundle
 
@@ -125,6 +174,55 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             existing=_locales(siblings),
             output=_output(request, root),
         )
+
+
+def _tree_in(directory: Path, children: list[Path]) -> TreeCandidate | None:
+    """The tree `directory` holds: locale directories with JSON in them, or locale files."""
+    locale_directories = _detected(
+        directory,
+        (
+            child.name
+            for child in children
+            if child.is_dir() and next(child.rglob("*.json"), None) is not None
+        ),
+    )
+    if locale_directories:
+        return TreeCandidate(directory, TreeLayout.DIRECTORY, locale_directories)
+    locale_files = _detected(
+        directory, (child.stem for child in children if child.suffix == ".json" and child.is_file())
+    )
+    if locale_files:
+        return TreeCandidate(directory, TreeLayout.FILE, locale_files)
+    return None
+
+
+def _detected(directory: Path, names: Iterable[str]) -> tuple[LocaleCode, ...]:
+    """The locales among `names` that are likely one, not a directory named like one."""
+    locales = tuple(
+        locale
+        for locale in _locales(names)
+        if len(locale.language) == 2 or locale.language in _DETECTED_THREE_LETTERS
+    )
+    if len(locales) == 1 and directory.name.lower() not in _TREE_NAMES:
+        return locales if locales[0].language == "en" else ()
+    return locales
+
+
+def _bundles_in(children: list[Path]) -> list[TreeCandidate]:
+    bundles = []
+    for child in children:
+        if child.suffix != ".json" or LocaleCode.recognized(child.stem) is not None:
+            continue
+        try:
+            if not child.is_file() or child.stat().st_size > _BUNDLE_BYTES:
+                continue
+            content, _ = read_json(child)
+        except (OSError, ValueError):
+            continue
+        locales = _bundle_locales(content)
+        if locales:
+            bundles.append(TreeCandidate(child, TreeLayout.BUNDLE, locales))
+    return bundles
 
 
 def _locale_of(name: str, source: LocaleCode | None) -> LocaleCode | None:

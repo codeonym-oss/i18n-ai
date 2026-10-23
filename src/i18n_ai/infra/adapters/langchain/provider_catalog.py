@@ -10,6 +10,7 @@ from typing import Any
 
 from ....application.ports.provider import IProviderCatalog, ProviderInfo
 from ....domain.exports.provider import ModelSpec, ProviderUnknown, ResolvedModel
+from .credentials import KEYS, key_of
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,12 @@ class LangChainProviderCatalog(IProviderCatalog):
             raise ProviderUnknown(name, sorted(self._modules))
         root = module.split(".", 1)[0]
         return ProviderInfo(
-            name=key, package=root.replace("_", "-"), module=root, installed=self.is_installed(root)
+            name=key,
+            package=root.replace("_", "-"),
+            module=root,
+            installed=self.is_installed(root),
+            key=KEYS.get(key),
+            key_set=key_of(key) is not None,
         )
 
     def resolve(self, spec: ModelSpec) -> ResolvedModel:

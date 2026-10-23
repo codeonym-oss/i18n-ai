@@ -8,9 +8,13 @@ Generate a website's locales from its source locale tree, with LLM agents that k
 placeholder intact.
 
 ```sh
+i18n-ai          # in your project: pick the tree, the locales, the provider and the model
 i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clinic's booking site"
 ```
 
+- **Asks for what is missing.** Run `i18n-ai` alone: it finds the locale trees in the project,
+  offers CLDR's locales to pick, lists the providers and each one's models from its API, and
+  asks for a missing API key, hidden. It ends with the command that repeats the run, for CI.
 - **Any tree.** A directory per locale (`locales/en/**/*.json`), a file per locale
   (`messages/en.json`), or one bundle holding them all (`{"en": {...}, "fr": {...}}`). The
   targets are written beside the source, in its JSON style (indent, final newline, UTF-8).
@@ -39,11 +43,12 @@ can hold.
 ## Usage
 
 ```sh
+i18n-ai                                          # guided: asks for everything it needs
 i18n-ai scan locales/en -t fr,ar                 # the precheck alone
 i18n-ai generate locales/en -t fr -t pt-BR -m anthropic:claude-sonnet-4-5
 i18n-ai generate messages/en.json -t ja -m ollama:qwen2.5:14b --dry-run
 i18n-ai generate locales -s en -t de --include "auth/*" --exclude "legacy/*" -y
-i18n-ai providers list | install ollama | check openai:gpt-4.1-mini
+i18n-ai providers list | models openai | install ollama | check openai:gpt-4.1-mini
 ```
 
 | Option | |
@@ -59,6 +64,7 @@ i18n-ai providers list | install ollama | check openai:gpt-4.1-mini
 | `--no-classify` | Skip the model's check that each file is a locale document. |
 | `--batch-size`, `--concurrency`, `--max-attempts` | Messages per call (40), calls at once (8), attempts per message (3). Also `I18N_AI_BATCH_SIZE`, … |
 | `-y, --yes`, `--dry-run` | Skip the confirmations (installing the provider if needed); or stop after the precheck. |
+| `--no-input` | Ask nothing, even at a terminal (implied on CI and when piped). |
 
 Exit codes: 0 done, 1 something was not written (or nothing qualified, or you declined), 2 a refusal
 (no tree, unknown provider, …).

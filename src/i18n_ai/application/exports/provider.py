@@ -1,4 +1,4 @@
-"""The provider intents: listing the providers, and installing one."""
+"""The provider intents: listing the providers and their models, and installing one."""
 
 from ..intents import provider
 from ..intents.provider import *  # noqa: F403

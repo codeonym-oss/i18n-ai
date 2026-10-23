@@ -17,6 +17,7 @@ from i18n_ai.domain.exports.locale import (
     SourceLocaleUnknown,
     TargetIsSource,
     TreeLayout,
+    known_locales,
     qualify,
 )
 from i18n_ai.domain.exports.provider import (
@@ -179,3 +180,12 @@ def test_model_specs() -> None:
         ModelSpec(" ")
     resolved = ResolvedModel("ollama", "qwen2.5:7b", "langchain-ollama", "langchain_ollama")
     assert resolved.spec == "ollama:qwen2.5:7b"
+
+
+def test_the_known_locales_put_the_most_shipped_first() -> None:
+    locales = known_locales()
+
+    assert [locale.value for locale in locales[:3]] == ["es", "fr", "de"]
+    assert len({locale.key for locale in locales}) == len(locales)
+    assert any(locale.value == "sw" for locale in locales)
+    assert not any(locale.value == "en" for locale in locales[:40])

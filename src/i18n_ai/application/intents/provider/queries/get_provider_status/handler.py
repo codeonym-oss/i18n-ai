@@ -12,9 +12,12 @@ class GetProviderStatusQueryHandler(QueryHandler[GetProviderStatusQuery, Provide
 
     async def handle(self, query: GetProviderStatusQuery) -> ProviderStatusView:
         model = self._providers.resolve(query.model)
+        provider = self._providers.provider(model.provider)
         return ProviderStatusView(
             provider=model.provider,
             model=model.model,
             package=model.package,
             installed=self._providers.is_installed(model.module),
+            key=provider.key,
+            key_set=provider.key_set,
         )

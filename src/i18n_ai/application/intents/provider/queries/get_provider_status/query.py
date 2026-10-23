@@ -9,7 +9,7 @@ from .view import ProviderStatusView
 @query
 @dataclass(frozen=True)
 class GetProviderStatusQuery(Query[ProviderStatusView]):
-    """The provider of a model, and whether its package is installed. Raises
-    `ProviderUnknown`."""
+    """The provider of a model, whether its package is installed, and whether its API key is
+    set. Raises `ProviderUnknown`."""
 
     model: ModelSpec

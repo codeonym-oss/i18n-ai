@@ -6,12 +6,16 @@ from ....domain.exports.provider import ModelSpec, ResolvedModel
 
 @dataclass(frozen=True)
 class ProviderInfo:
-    """A provider LangChain integrates, and whether its package is installed."""
+    """A provider LangChain integrates, whether its package is installed, and the environment
+    variable holding its API key (None when it takes no key, or several settings), and whether
+    that is set."""
 
     name: str
     package: str
     module: str
     installed: bool
+    key: str | None = None
+    key_set: bool = False
 
 
 class IProviderCatalog(ABC):

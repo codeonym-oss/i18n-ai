@@ -1,10 +1,12 @@
 # Commands
 
 ```text
-i18n-ai [-v | -vv] [--version] COMMAND
+i18n-ai [-v | -vv] [--version] [COMMAND]
 ```
 
-`-v` shows the steps, `-vv` everything, including the HTTP requests.
+`-v` shows the steps, `-vv` everything, including the HTTP requests. `i18n-ai` alone, at a
+terminal, is a guided `generate`: every option it needs is asked for. Elsewhere it shows this
+help.
 
 ## `i18n-ai scan PATH`
 
@@ -18,13 +20,14 @@ needs. Nothing is sent to a model.
 | `-o, --output` | Where the targets go. Default: beside the source. |
 | `--include`, `--exclude` | Globs over the source's file names; repeat them. |
 
-## `i18n-ai generate PATH`
+## `i18n-ai generate [PATH]`
 
-The precheck, then the generation.
+The precheck, then the generation. At a terminal, a missing `PATH`, target, source (when the tree
+cannot tell it), model or API key is asked for; see [Getting started](../guide/getting-started.md).
 
 | Option | |
 |---|---|
-| `-t, --target` | A locale to generate; repeat it, or separate with commas. Required. |
+| `-t, --target` | A locale to generate; repeat it, or separate with commas. Asked for when missing. |
 | `-m, --model` | `provider:model`. Default: `I18N_AI_MODEL`. |
 | `-s, --source` | The source locale, when the tree has several (default `en`, or the only one). |
 | `-o, --output` | Where the targets go. Default: beside the source. |
@@ -39,12 +42,14 @@ The precheck, then the generation.
 | `--temperature` | The model's temperature; the provider's default if unset. |
 | `-y, --yes` | Skip the confirmations, installing the provider's package if needed. |
 | `--dry-run` | Stop after the precheck. |
+| `--no-input` | Ask nothing: a missing path or target is an error. Implied on CI and when piped. |
 
 ## `i18n-ai providers`
 
 | Command | |
 |---|---|
-| `providers list` | Every provider LangChain knows, its package, and whether it is installed. |
+| `providers list` | Every provider LangChain knows, its package, whether it is installed, and its API key's variable and whether it is set. |
+| `providers models PROVIDER` | The provider's models, from its API, the recommended first, then the newest. Exit 2, with the reason, when the list cannot be read (no key, no network). |
 | `providers check MODEL` | A model's provider and package, and whether it is installed (exit 1 if not). |
 | `providers install PROVIDER` | Install a provider's package, unless it is there. |
 
@@ -64,5 +69,7 @@ The precheck, then the generation.
 | `I18N_AI_MODEL` | The default `--model`. |
 | `I18N_AI_BATCH_SIZE`, `I18N_AI_CONCURRENCY`, `I18N_AI_MAX_ATTEMPTS` | The defaults of those options. |
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_HOST`, … | The provider's own settings. |
+| `I18N_AI_STATE_DIR` | Where the interactive mode remembers its answers. Default: `~/.local/state/i18n-ai`, `~/Library/Application Support/i18n-ai` or `%LOCALAPPDATA%\i18n-ai`. |
+| `CI` | When true, nothing is asked, as with `--no-input`. |
 
 A `.env` in the working directory is read first, without overriding the environment.
