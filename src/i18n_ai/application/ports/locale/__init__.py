@@ -8,7 +8,7 @@ from .engine import (
     ITranslationEngine,
     TranslationJob,
 )
-from .scanner import ILocaleTreeScanner, TreeRequest
+from .scanner import ILocaleTreeScanner, TreeCandidate, TreeRequest
 from .store import ILocaleStore
 
 __all__ = [
@@ -22,5 +22,6 @@ __all__ = [
     "ILocaleTreeScanner",
     "ITranslationEngine",
     "TranslationJob",
+    "TreeCandidate",
     "TreeRequest",
 ]

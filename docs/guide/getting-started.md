@@ -11,6 +11,29 @@ i18n-ai needs Python 3.12 or later. A provider's LangChain package (`langchain-o
 `langchain-anthropic`, …) is not installed with it: i18n-ai installs the one your model needs the
 first time you use it, into its own environment, after asking. See [Providers](providers.md).
 
+## Just run it
+
+In your project, run `i18n-ai` alone, and answer its questions:
+
+```text
+? Which locale tree?          » public/locales  [directory: en, fr]
+? Which locales to generate?  (type to search, space to pick)  ● fr — French · in the tree
+? Where do the new locales go? » Beside the source (public/locales)
+? Which provider?             » openai  (key set, installed)
+? Which openai model?         » gpt-4.1-mini  · recommended
+```
+
+It finds the locale trees in the project, offers every CLDR locale (the ones already in the tree
+picked), lists the providers with the ones ready to use first, and reads the chosen provider's
+model list from its API, the recommended models first. A missing API key is asked for, hidden,
+and used for that run only. Then comes the precheck and the go-ahead, as below, and at the end
+the one-line command that repeats the run without a question.
+
+Only what a run is not told is asked: `i18n-ai generate locales/en -t fr` asks for the model
+alone, and not even that when `I18N_AI_MODEL` is set. The answers are remembered per project and
+offered as the defaults next time. Nothing is asked with `--no-input`, on CI (`CI=true`), or when
+the input or output is not a terminal: a missing path or target is then an error, as in a script.
+
 ## Credentials
 
 The provider reads its key from its usual environment variable: `OPENAI_API_KEY`,

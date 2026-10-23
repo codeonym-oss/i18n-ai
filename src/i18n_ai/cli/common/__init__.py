@@ -1,4 +1,4 @@
-from .options import locales, tree_request
+from .options import MissingParameter, locales, tree_request
 from .runner import run
 
-__all__ = ["locales", "run", "tree_request"]
+__all__ = ["MissingParameter", "locales", "run", "tree_request"]

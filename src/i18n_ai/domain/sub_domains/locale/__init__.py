@@ -22,7 +22,16 @@ from .rules import (
     reusable_translations,
 )
 from .schema import LocaleSchema, MissingTranslations, PluralForm, Slot, SourceUnit, extract_schema
-from .vo import CARDINAL, ORDINAL, KeyPath, LocaleCode, PluralKind, Segment, TreeLayout
+from .vo import (
+    CARDINAL,
+    ORDINAL,
+    KeyPath,
+    LocaleCode,
+    PluralKind,
+    Segment,
+    TreeLayout,
+    known_locales,
+)
 
 __all__ = [
     "CARDINAL",
@@ -59,6 +68,7 @@ __all__ = [
     "errors",
     "extract_schema",
     "fallback",
+    "known_locales",
     "normalize",
     "qualify",
     "reusable_translations",

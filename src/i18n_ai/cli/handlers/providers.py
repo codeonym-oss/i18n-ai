@@ -5,12 +5,14 @@ import typer
 from ...application.exports.provider import (
     GetProviderStatusQuery,
     InstallProviderCommand,
+    ListModelsQuery,
     ListProvidersQuery,
 )
 from ...di import Bootstrap
 from ...domain.exports.provider import ModelSpec
 from ..common import run
-from ..rendering import render_providers
+from ..common.runner import errors
+from ..rendering import render_models, render_providers
 
 providers = typer.Typer(
     help="The model providers, and their LangChain packages.", no_args_is_help=True
@@ -19,7 +21,7 @@ providers = typer.Typer(
 
 @providers.command("list")
 def list_providers() -> None:
-    """List the providers LangChain can use, and which are installed."""
+    """List the providers LangChain can use, which are installed, and which have their key."""
 
     async def flow(app: Bootstrap) -> int:
         render_providers(app.console, await app.mediator.send(ListProvidersQuery()))
@@ -56,5 +58,29 @@ def check_provider(
         mark = "[green]installed[/]" if status.installed else "[yellow]not installed[/]"
         app.console.print(f"[cyan]{status.provider}[/] · {status.model} · {status.package} {mark}")
         return 0 if status.installed else 1
+
+    run(flow)
+
+
+@providers.command("models")
+def list_models(
+    provider: Annotated[
+        str, typer.Argument(help="The provider, e.g. openai, anthropic, ollama, google_genai.")
+    ],
+) -> None:
+    """List a provider's models, from its API, the recommended first, then the newest."""
+
+    async def flow(app: Bootstrap) -> int:
+        models = await app.mediator.send(ListModelsQuery(provider))
+        if models.problem:
+            errors.print(
+                f"[red]error:[/] cannot list the {models.provider} models: {models.problem}"
+            )
+            if models.models:
+                names = ", ".join(model.id for model in models.models)
+                errors.print(f"[dim]The recommended ones: {names}[/]")
+            return 2
+        render_models(app.console, models)
+        return 0
 
     run(flow)

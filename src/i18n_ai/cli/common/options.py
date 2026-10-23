@@ -6,6 +6,18 @@ from ...application.ports.locale import TreeRequest
 from ...domain.exports.locale import InvalidLocaleCode, LocaleCode
 
 
+class MissingParameter(typer.BadParameter):
+    """A parameter a command needs, missing where nothing can ask for it; worded as Click words
+    its own: `Missing option '--target'.`"""
+
+    def __init__(self, kind: str, hint: str) -> None:
+        super().__init__("", param_hint=hint)
+        self.kind = kind
+
+    def format_message(self) -> str:
+        return f"Missing {self.kind} {self.param_hint}."
+
+
 def locales(values: list[str] | None) -> tuple[LocaleCode, ...]:
     """The locales of a repeatable option, each value possibly comma-separated: `-t fr,de -t ar`."""
     codes: list[LocaleCode] = []

@@ -6,6 +6,7 @@ import typer
 from rich.logging import RichHandler
 
 from ..di.messaging.mediator import LOGGER as MEDIATOR_LOGGER
+from . import interactive
 from .common.runner import errors
 from .handlers.generate import generate
 from .handlers.providers import providers
@@ -17,7 +18,6 @@ app = typer.Typer(
         "Generate a website's locales from its source locale tree, with LLM agents that keep "
         "placeholders intact."
     ),
-    no_args_is_help=True,
     pretty_exceptions_show_locals=False,
 )
 app.command("scan")(scan)
@@ -31,8 +31,9 @@ def _version(value: bool) -> None:
         raise typer.Exit()
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def root(
+    ctx: typer.Context,
     verbose: Annotated[
         int,
         typer.Option("--verbose", "-v", count=True, help="-v for the steps, -vv for everything."),
@@ -54,6 +55,13 @@ def root(
         # The HTTP clients' request lines drown the steps
         for noisy in ("httpx", "httpcore", "openai", "anthropic"):
             logging.getLogger(noisy).setLevel(logging.WARNING)
+
+    if ctx.invoked_subcommand is None:
+        # `i18n-ai` alone: a guided generation at a terminal, the help elsewhere
+        if interactive.is_interactive(no_input=False):
+            generate()
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
 
 
 def main() -> None:

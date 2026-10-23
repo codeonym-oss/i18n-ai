@@ -8,6 +8,7 @@ from .queries.get_provider_status import (
     GetProviderStatusQueryHandler,
     ProviderStatusView,
 )
+from .queries.list_models import ListModelsQuery, ListModelsQueryHandler, ModelsView, ModelView
 from .queries.list_providers import ListProvidersQuery, ListProvidersQueryHandler, ProviderView
 
 __all__ = [
@@ -16,8 +17,12 @@ __all__ = [
     "InstallProviderCommand",
     "InstallProviderCommandHandler",
     "InstallReceipt",
+    "ListModelsQuery",
+    "ListModelsQueryHandler",
     "ListProvidersQuery",
     "ListProvidersQueryHandler",
+    "ModelView",
+    "ModelsView",
     "ProviderStatusView",
     "ProviderView",
 ]

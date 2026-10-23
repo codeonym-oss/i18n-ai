@@ -6,6 +6,12 @@ from .commands.generate_locales import (
     GenerationReceipt,
     ResultStatus,
 )
+from .queries.detect_locale_trees import (
+    DetectLocaleTreesQuery,
+    DetectLocaleTreesQueryHandler,
+    TreeCandidateView,
+)
+from .queries.list_locales import ListLocalesQuery, ListLocalesQueryHandler, LocaleView
 from .queries.scan_locale_tree import (
     ScanLocaleTreeQuery,
     ScanLocaleTreeQueryHandler,
@@ -16,11 +22,16 @@ from .queries.scan_locale_tree import (
 )
 
 __all__ = [
+    "DetectLocaleTreesQuery",
+    "DetectLocaleTreesQueryHandler",
     "FileResult",
     "GenerateLocalesCommand",
     "GenerateLocalesCommandHandler",
     "GenerationOptions",
     "GenerationReceipt",
+    "ListLocalesQuery",
+    "ListLocalesQueryHandler",
+    "LocaleView",
     "ResultStatus",
     "ScanLocaleTreeQuery",
     "ScanLocaleTreeQueryHandler",
@@ -28,4 +39,5 @@ __all__ = [
     "SourceFileView",
     "TargetFileView",
     "TargetView",
+    "TreeCandidateView",
 ]

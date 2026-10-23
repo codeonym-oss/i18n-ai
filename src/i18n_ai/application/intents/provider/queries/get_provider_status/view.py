@@ -7,3 +7,5 @@ class ProviderStatusView:
     model: str
     package: str
     installed: bool
+    key: str | None
+    key_set: bool

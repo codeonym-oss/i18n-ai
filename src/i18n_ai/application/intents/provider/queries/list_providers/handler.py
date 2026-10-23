@@ -13,6 +13,8 @@ class ListProvidersQueryHandler(QueryHandler[ListProvidersQuery, tuple[ProviderV
     async def handle(self, query: ListProvidersQuery) -> tuple[ProviderView, ...]:
         providers = sorted(self._providers.providers(), key=lambda provider: provider.name)
         return tuple(
-            ProviderView(provider.name, provider.package, provider.installed)
+            ProviderView(
+                provider.name, provider.package, provider.installed, provider.key, provider.key_set
+            )
             for provider in providers
         )

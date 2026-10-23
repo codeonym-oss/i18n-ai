@@ -53,3 +53,39 @@ def test_the_json_style_is_detected() -> None:
     assert detect_style('{\n\t"a": 1\n}').indent == "\t"
     assert detect_style('{"a": 1}').indent is None
     assert detect_style('{"a": 1}').trailing_newline is False
+
+
+async def test_detect_finds_every_tree_in_a_project(examples: Path) -> None:
+    (examples / "node_modules/pkg/locales/en").mkdir(parents=True)
+    (examples / "node_modules/pkg/locales/en/a.json").write_text('{"a": "A"}')
+    (examples / "package.json").write_text('{"name": "site", "dependencies": {}}')
+    (examples / "broken.json").write_text("{")
+
+    found = await FileSystemLocaleTreeScanner().detect(examples)
+
+    assert [(c.path.relative_to(examples).as_posix(), c.layout.value) for c in found] == [
+        ("bundle/i18n.json", "bundle"),
+        ("i18next/locales", "directory"),
+        ("icu/messages", "file"),
+    ]
+    assert [locale.value for locale in found[1].locales] == ["en", "fr"]
+
+
+async def test_detect_finds_nothing_in_a_project_without_locales(tmp_path: Path) -> None:
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/config.json").write_text('{"debug": true}')
+
+    assert await FileSystemLocaleTreeScanner().detect(tmp_path) == []
+
+
+async def test_detect_takes_a_lone_locale_only_where_it_looks_like_one(tmp_path: Path) -> None:
+    for directory in ("app/ts", "app/locales/fr", "site/en"):
+        (tmp_path / directory).mkdir(parents=True)
+        (tmp_path / directory / "a.json").write_text('{"a": "A"}')
+
+    found = await FileSystemLocaleTreeScanner().detect(tmp_path)
+
+    assert sorted(c.path.relative_to(tmp_path).as_posix() for c in found) == [
+        "app/locales",
+        "site",
+    ]
