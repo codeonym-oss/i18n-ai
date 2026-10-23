@@ -292,6 +292,70 @@ def test_a_named_preset_overrides_the_detected_one(
     assert "no preset is called nope" in flat(output)
 
 
+def test_a_path_in_the_presets_locales_takes_the_preset_and_one_elsewhere_its_line(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (examples / "i18next/locales/en/extra.yml").write_text("a: A\n")
+    monkeypatch.chdir(examples / "i18next")
+
+    code, output = invoke("scan", "locales/en")
+
+    assert code == 0, output
+    assert "Preset i18next · i18next in package.json → locales" in posix(output)
+    assert "Format    json (the preset's; the yaml files are left alone, --format chooses)" in (
+        output
+    )
+
+    (examples / "i18next/other/en").mkdir(parents=True)
+    (examples / "i18next/other/en/a.json").write_text('{"a": "A"}')
+    (examples / "i18next/other/en/b.yml").write_text("b: B\n")
+    code, output = invoke("scan", "other/en")
+
+    assert code == 2  # the preset's format is for its own locales
+    assert "Preset i18next" in output
+    assert "mixes the formats json, yaml" in flat(output)
+
+
+def test_a_laravel_project_is_scanned_from_its_keys(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(examples / "laravel")
+
+    code, output = invoke("scan", "-t", "de")
+
+    assert code == 0, output
+    assert "Preset laravel · laravel/framework in composer.json → lang" in posix(output)
+    assert "en English (the keys of fr.json)" in output
+    assert "de.json" in output
+
+    code, output = invoke("scan", "lang", "-t", "de")
+
+    assert code == 0, output
+    assert "(the keys of fr.json)" in output
+
+
+def test_laravel_s_syntax_stays_in_its_own_locales(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = examples / "laravel"
+    (project / "lang/de.json").write_text('{"Welcome, :name!": "Willkommen!"}', encoding="utf-8")
+    (project / "resources/js/locales").mkdir(parents=True)
+    (project / "resources/js/locales/en.json").write_text('{"m": "Ratio :name"}', encoding="utf-8")
+    (project / "resources/js/locales/de.json").write_text('{"m": "Verhältnis"}', encoding="utf-8")
+    monkeypatch.chdir(project)
+
+    code, output = invoke("scan", "lang", "-t", "de")
+
+    assert code == 0, output
+    assert "fill (0 kept)" in output  # its lost :name is translated again
+
+    code, output = invoke("scan", "resources/js/locales", "-t", "de")
+
+    assert code == 0, output
+    assert "Preset laravel" in output
+    assert "fill (1 kept)" in output  # `:name` is text in a vue-i18n tree
+
+
 def test_scan_with_no_path_and_no_preset_takes_the_only_tree(
     examples: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

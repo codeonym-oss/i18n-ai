@@ -1,0 +1,8 @@
+{
+    "Welcome, :name!": "Bienvenue, :name !",
+    ":Name joined the team": ":Name a rejoint l'équipe",
+    "Dashboard | Acme": "Tableau de bord | Acme",
+    "There is one apple|There are many apples": "Il y a une pomme|Il y a beaucoup de pommes",
+    "{0} No orders|[1,*] :count orders": "{0} Aucune commande|[1,*] :count commandes",
+    "Sign out": "Se déconnecter"
+}

@@ -1,6 +1,7 @@
 from i18n_ai.domain.exports.locale import (
     LocaleCode,
     LocaleDocument,
+    MessageSyntax,
     Severity,
     ViolationCode,
     check,
@@ -10,8 +11,17 @@ from i18n_ai.domain.exports.locale import (
 )
 
 
-def schema_of(content: dict[str, object], target: str = "fr"):  # type: ignore[no-untyped-def]
-    return extract_schema(LocaleDocument(content), LocaleCode("en"), LocaleCode(target))
+def schema_of(  # type: ignore[no-untyped-def]
+    content: dict[str, object],
+    target: str = "fr",
+    syntax: MessageSyntax = MessageSyntax.STANDARD,
+):
+    return extract_schema(LocaleDocument(content), LocaleCode("en"), LocaleCode(target), syntax)
+
+
+def laravel(text: str, target: str = "fr"):  # type: ignore[no-untyped-def]
+    schema = schema_of({text: text}, target, MessageSyntax.LARAVEL)
+    return schema, schema.units[0]
 
 
 def codes(violations) -> list[ViolationCode]:  # type: ignore[no-untyped-def]
@@ -78,3 +88,59 @@ def test_only_good_existing_translations_are_reused() -> None:
     schema = schema_of({"a": "Hi {{name}}", "b": "Bye", "c": "Later"})
     existing = LocaleDocument({"a": "Salut {{nom}}", "b": "Au revoir"})
     assert reusable_translations(schema, existing) == {"2": "Au revoir"}
+
+
+def test_a_laravel_placeholder_keeps_its_name() -> None:
+    schema, unit = laravel("Welcome, :name! You have :count messages")
+    assert schema.syntax == MessageSyntax.LARAVEL
+    assert check(schema, unit, ":Name, bienvenue ! Vous avez :count messages") == []
+    for broken in (
+        "Bienvenue ! Vous avez :count messages",
+        "Bienvenue, :nom ! Vous avez :count messages",
+        "Bienvenue, :name :name ! Vous avez :count messages",
+    ):
+        assert codes(check(schema, unit, broken)) == [ViolationCode.PLACEHOLDERS], broken
+
+
+def test_a_colon_is_text_outside_laravel_s_syntax() -> None:
+    schema = schema_of({"m": "Ratio:high, :name"})
+    assert check(schema, schema.units[0], "Verhältnis:hoch, :nom") == []
+
+
+def test_a_pipe_plural_takes_the_target_s_number_of_forms() -> None:
+    schema, unit = laravel(":count apple|:count apples", "ru")
+    assert check(schema, unit, ":count яблоко|:count яблока|:count яблок") == []
+    assert codes(check(schema, unit, ":count яблоко|:count яблок")) == [ViolationCode.PIPE_FORMS]
+    assert codes(check(schema, unit, ":count яблок")) == [ViolationCode.PIPE_FORMS]
+
+    schema, unit = laravel(":count apple|:count apples", "ja")
+    assert check(schema, unit, "りんご:count個") == []
+    schema, unit = laravel(":count apple|:count apples", "fr")
+    assert check(schema, unit, ":count pomme|:count pommes") == []
+
+
+def test_a_pipe_plural_keeps_its_ranges() -> None:
+    schema, unit = laravel("{0} No orders|[1,*] :count orders", "ru")
+    assert check(schema, unit, "{0} Нет заказов|[1,*] :count заказов") == []
+    for broken in ("{0} Нет заказов|[2,*] :count заказов", "{0} Нет заказов"):
+        assert ViolationCode.PIPE_RANGES in codes(check(schema, unit, broken)), broken
+
+
+def test_a_pipe_plural_s_placeholders_are_a_set() -> None:
+    schema, unit = laravel(":name has :count apple|:name has :count apples", "ru")
+    assert check(schema, unit, "У :name :count яблоко|:count яблока|:count яблок") == []
+    found = check(schema, unit, "У :name :count яблоко|:city яблока|:count яблок")
+    assert codes(found) == [ViolationCode.PLACEHOLDERS]
+    assert "unexpected :city" in found[0].message
+
+
+def test_a_spaced_pipe_is_text() -> None:
+    schema, unit = laravel("Dashboard | Acme", "ru")
+    assert check(schema, unit, "Панель | Acme") == []
+
+
+def test_a_pipe_plural_s_forms_have_no_space_around_their_pipes() -> None:
+    schema, unit = laravel("apple|apples")
+    found = check(schema, unit, "une pomme | des pommes")
+    assert codes(found) == [ViolationCode.PIPE_FORMS]
+    assert "no space" in found[0].message

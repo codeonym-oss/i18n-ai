@@ -4,7 +4,13 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
 
-from ....domain.exports.locale import LocaleCode, LocaleDocument, SourceFile, Violation
+from ....domain.exports.locale import (
+    LocaleCode,
+    LocaleDocument,
+    MessageSyntax,
+    SourceFile,
+    Violation,
+)
 from ....domain.exports.provider import ResolvedModel
 
 
@@ -41,13 +47,14 @@ class TranslationJob:
 @dataclass(frozen=True)
 class EngineRequest:
     """The source files to translate into each target. `existing` maps a file's name and a
-    target's key to the target's current document."""
+    target's key to the target's current document; `syntax` is the tree's messages'."""
 
     source: LocaleCode
     files: tuple[SourceFile, ...]
     targets: tuple[LocaleCode, ...]
     existing: Mapping[tuple[PurePosixPath, str], LocaleDocument]
     settings: EngineSettings
+    syntax: MessageSyntax = MessageSyntax.STANDARD
 
 
 @dataclass(frozen=True)

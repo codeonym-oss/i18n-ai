@@ -95,6 +95,7 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                 context=options.context,
                 temperature=options.temperature,
             ),
+            syntax=tree.syntax,
         )
         self._progress.start(len(qualified) * len(targets))
         try:

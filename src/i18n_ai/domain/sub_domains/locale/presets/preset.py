@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ..placeholders import PlaceholderStyle
-from ..vo import LocaleFormat
+from ..vo import LocaleFormat, MessageSyntax
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,8 @@ class ConfigHint:
 class Preset:
     """An i18n library: what reveals it in a project (a dependency in its manifest, or one of
     its files), where its locales are (a config file's word for it, else the usual places), and
-    how they are written: their format, and the placeholders its messages use."""
+    how they are written: their format, the placeholders its messages use, and their syntax,
+    which turns on rules of its own in the library's locales."""
 
     name: str
     library: str
@@ -31,3 +32,4 @@ class Preset:
     trees: tuple[str, ...] = ()
     format: LocaleFormat | None = None
     placeholders: tuple[PlaceholderStyle, ...] = ()
+    syntax: MessageSyntax = MessageSyntax.STANDARD

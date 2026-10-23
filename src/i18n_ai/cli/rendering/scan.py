@@ -35,10 +35,12 @@ def render_scan(console: Console, report: ScanReport, overwrite: bool = False) -
         if left_alone
         else report.format,
     )
-    summary.add_row(
-        "Source",
-        f"[cyan]{report.source}[/] {report.source_name} [dim]{shown(report.source_path)}[/]",
+    where = (
+        f"(the keys of {', '.join(report.source_from)})"
+        if report.source_from
+        else shown(report.source_path)
     )
+    summary.add_row("Source", f"[cyan]{report.source}[/] {report.source_name} [dim]{where}[/]")
     summary.add_row("Output", shown(report.output))
     summary.add_row("Existing", ", ".join(report.existing) or "[dim]none[/]")
     console.print(Panel(summary, title="Locale tree", title_align="left", border_style="blue"))

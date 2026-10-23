@@ -1,8 +1,11 @@
+import dataclasses
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from ..vo.syntax import MessageSyntax
 from . import icu
+from .pipes import PipePlural, parse_pipes
 from .tokens import PlaceholderStyle, flat_tokens, mask_braced, styles_in
 
 
@@ -27,11 +30,13 @@ class Signature:
     appears, and its plurals and selects. Two messages have the same signature when a
     translation of one can stand in for the other in code.
 
-    `error` says why the message's braces are not ICU; its braces then count as placeholders."""
+    `error` says why the message's braces are not ICU; its braces then count as placeholders.
+    `pipes` is a Laravel pipe plural's shape, whose placeholders are its forms' (see `pipes`)."""
 
     tokens: tuple[str, ...]
     branchings: tuple[Branching, ...]
     error: str | None = None
+    pipes: PipePlural | None = None
 
     @property
     def empty(self) -> bool:
@@ -48,20 +53,30 @@ class Signature:
         return list(names)
 
 
-def signature_of(text: str, *, quotes: bool) -> Signature:
-    """The signature of `text`. `quotes` says whether an apostrophe can quote ICU syntax (see
-    `icu.parse`): it can in documents that use ICU."""
+def signature_of(
+    text: str, *, quotes: bool, syntax: MessageSyntax = MessageSyntax.STANDARD
+) -> Signature:
+    """The signature of `text`, in its tree's `syntax`. `quotes` says whether an apostrophe can
+    quote ICU syntax (see `icu.parse`): it can in documents that use ICU."""
+    pipes = parse_pipes(text) if syntax == MessageSyntax.LARAVEL else None
+    if pipes is not None:
+        # Its placeholders are its forms', read without their ranges, which ICU would take
+        # for arguments (`{0}`)
+        forms = signature_of(" ".join(pipes.forms), quotes=quotes, syntax=syntax)
+        return dataclasses.replace(forms, pipes=pipes)
     masked, braced = mask_braced(text)
     if not icu.has_braces(masked):
-        return Signature(tuple(sorted(flat_tokens(masked, braced))), ())
+        return Signature(tuple(sorted(flat_tokens(masked, braced, syntax))), ())
     try:
         message = icu.parse(masked, quotes=quotes)
     except icu.IcuSyntaxError as error:
         braces = ["{"] * masked.count("{") + ["}"] * masked.count("}")
-        return Signature(tuple(sorted(flat_tokens(masked, braced) + braces)), (), error.message)
+        return Signature(
+            tuple(sorted(flat_tokens(masked, braced, syntax) + braces)), (), error.message
+        )
     tokens: list[str] = []
     branchings: list[Branching] = []
-    _collect(message, braced, tokens, branchings)
+    _collect(message, braced, syntax, tokens, branchings)
     ordered = tuple(
         sorted(
             branchings,
@@ -72,16 +87,20 @@ def signature_of(text: str, *, quotes: bool) -> Signature:
 
 
 def _collect(
-    message: icu.Message, braced: list[str], tokens: list[str], branchings: list[Branching]
+    message: icu.Message,
+    braced: list[str],
+    syntax: MessageSyntax,
+    tokens: list[str],
+    branchings: list[Branching],
 ) -> None:
     for node in message:
         if isinstance(node, icu.Text):
-            tokens.extend(flat_tokens(node.value, braced))
+            tokens.extend(flat_tokens(node.value, braced, syntax))
         elif node.branching:
             tokens.append(f"{{{node.name}, {node.type}}}")
             inner: list[str] = []
             for branch in node.options.values():
-                _collect(branch, braced, inner, branchings)
+                _collect(branch, braced, syntax, inner, branchings)
             branchings.append(
                 Branching(node.name, node.type or "", frozenset(node.options), frozenset(inner))
             )
@@ -90,11 +109,16 @@ def _collect(
             tokens.append("{" + ", ".join(part for part in parts if part) + "}")
 
 
-def detect_styles(texts: Iterable[str]) -> frozenset[PlaceholderStyle]:
-    """The families of placeholders a document's messages use."""
+def detect_styles(
+    texts: Iterable[str], syntax: MessageSyntax = MessageSyntax.STANDARD
+) -> frozenset[PlaceholderStyle]:
+    """The families of placeholders a document's messages use, in its `syntax`."""
     styles: set[PlaceholderStyle] = set()
     for text in texts:
-        styles |= styles_in(text)
+        pipes = parse_pipes(text) if syntax == MessageSyntax.LARAVEL else None
+        if pipes is not None:
+            text = " ".join(pipes.forms)  # its ranges are not ICU arguments
+        styles |= styles_in(text, syntax)
         masked, _ = mask_braced(text)
         if icu.has_braces(masked):
             try:

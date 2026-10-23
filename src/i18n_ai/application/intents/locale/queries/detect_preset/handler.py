@@ -60,4 +60,5 @@ def view(preset: Preset) -> PresetView:
         detected_from=(*preset.packages, *preset.files),
         format=preset.format.value if preset.format is not None else None,
         placeholders=tuple(style.value for style in preset.placeholders),
+        syntax=preset.syntax.value,
     )

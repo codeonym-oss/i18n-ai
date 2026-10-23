@@ -4,6 +4,7 @@ from pathlib import Path, PurePosixPath
 from ..vo.format import LocaleFormat
 from ..vo.layout import TreeLayout
 from ..vo.locale_code import LocaleCode
+from ..vo.syntax import MessageSyntax
 from .document import LocaleDocument
 
 
@@ -12,6 +13,9 @@ class SourceFile:
     """A file of the source locale. `name` is its path inside the source locale's directory
     (`auth/login.json`), or the file's own name for the other layouts. `document` is None
     when the file is not an object, and `error` says why.
+
+    A source made of Laravel's keys has no file of its own: its `path` is the first locale file
+    its keys are read from, whose style its targets take.
 
     `root_key` is the key the file holds its messages under: the source locale's in a bundle,
     and in a file whose only key is its locale, as Rails writes them (`en:`)."""
@@ -41,7 +45,9 @@ class LocaleTree:
 
     `root` holds the locale directories, the locale files, or is the bundle file itself; the
     targets are written under `output`, which is `root` unless asked otherwise. Every source
-    file is in one `format`; the source's files in the formats `left_alone` are not read."""
+    file is in one `format`; the source's files in the formats `left_alone` are not read.
+    `syntax` is its messages'; `source_from` names the files a source of keys was read from,
+    as a Laravel tree without its source's file has it."""
 
     root: Path
     layout: TreeLayout
@@ -52,6 +58,8 @@ class LocaleTree:
     format: LocaleFormat = LocaleFormat.JSON
     prefix: str = ""
     left_alone: tuple[LocaleFormat, ...] = ()
+    syntax: MessageSyntax = MessageSyntax.STANDARD
+    source_from: tuple[str, ...] = ()
 
     @property
     def source_path(self) -> Path:

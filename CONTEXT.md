@@ -58,6 +58,16 @@ The i18next keys of one plural, one per category: `item_one`, `item_other`. A ta
 categories, from CLDR.
 _Avoid_: plural keys, plural forms (for the keys)
 
+**Pipe plural**:
+A Laravel message `trans_choice` splits at its pipes: `one apple|:count apples`, or with ranges,
+`{0} none|[1,*] some`. A target gets the number of forms Laravel's own table gives its language.
+A pipe with a space on each side and no range is text.
+_Avoid_: choice string
+
+**Message syntax**:
+What a tree's messages mean beyond the placeholders every library shares: standard, or Laravel's
+(the keys as the source, `:name`, pipe plurals). A preset sets it for its own locales.
+
 **Plural category**:
 CLDR's `zero`, `one`, `two`, `few`, `many`, `other`; each language uses some, always `other`.
 

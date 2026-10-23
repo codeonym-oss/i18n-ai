@@ -68,9 +68,44 @@ answer. You can pick another tree, which is then read in its own format.
 
 ## Placeholders
 
-Each preset lists the placeholders its library uses. They are documentation only: every message
-is checked for every family i18n-ai knows, whatever the preset. So a preset never loosens a
-check. See [The rules](rules.md).
+Each preset lists the placeholders its library uses. For every library but Laravel they are
+documentation only: every message is checked for every family i18n-ai knows, whatever the
+preset. So a preset never loosens a check. See [The rules](rules.md).
+
+Laravel's `:name` placeholders and pipe plurals are the exception. A colon or a pipe is ordinary
+text in other libraries' messages, so they are checked only in Laravel's own locales: with no
+path, a path in `lang/`, or `--preset laravel`.
+
+## Laravel
+
+| | |
+|---|---|
+| Found by | `laravel/framework` in `composer.json` |
+| Locales | `lang`; else `resources/lang` (before Laravel 9) |
+| Format | JSON, `lang/<lng>.json` |
+| Placeholders | `:name`, `:Name`, `:NAME` |
+
+A key is its English text: `lang/fr.json` holds `{"Welcome, :name!": "Bienvenue, :name !"}`.
+The source is `lang/en.json` when there is one. Otherwise it is the keys of every locale file,
+each key's text the key itself:
+
+```text
+Source    en English (the keys of de.json, fr.json)
+```
+
+`--source` names another language: its file when there is one, else the keys, taken as that
+language. A key found only in the PHP code (`__('...')`) is not translated until a locale file
+has it.
+
+A placeholder keeps its name, as often as it appears; its case may change, `:name` becoming
+`:Name` at the start of a sentence. A pipe plural, as `trans_choice` reads it, gets the target's
+number of forms by Laravel's own table, which is not CLDR's: 2 in French, 3 in Russian, 1 in
+Japanese. Its forms with a range (`{0} none|[1,*] some`) keep their ranges. A pipe with a
+space on each side and no range is text, as in `Dashboard | Acme`.
+
+Laravel's PHP locales, `lang/<lng>/*.php`, and `lang/vendor/` are left alone. The Laravel
+preset comes first: in an Inertia app that also uses vue-i18n or i18next, name the frontend's
+locales' path to translate them, with their own rules.
 
 ## Nuxt i18n
 

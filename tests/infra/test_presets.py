@@ -44,6 +44,7 @@ def npm(*packages: str) -> str:
         ("rails", "rails", "rails in Gemfile", "config/locales", None),
         ("django", "django", "django in requirements.txt", "locale", "site/settings.py"),
         ("flutter", "flutter", "flutter_localizations in pubspec.yaml", "lib/l10n", "l10n.yaml"),
+        ("laravel", "laravel", "laravel/framework in composer.json", "lang", None),
     ],
 )
 async def test_each_example_reveals_its_library(
@@ -87,6 +88,26 @@ async def test_the_first_library_whose_locales_are_found_wins(tmp_path: Path) ->
 
     assert match is not None
     assert (match.preset.name, match.tree) == ("vue-i18n", tmp_path / "src/locales")
+
+
+async def test_laravel_comes_before_the_frontend_libraries_of_an_inertia_app(
+    tmp_path: Path,
+) -> None:
+    write(
+        tmp_path,
+        {
+            "composer.json": json.dumps({"require": {"laravel/framework": "^11.0"}}),
+            "package.json": npm("vue-i18n", "@inertiajs/vue3"),
+            "lang/fr.json": '{"Hello": "Bonjour"}',
+            "resources/js/locales/en.json": '{"hello": "Hello"}',
+        },
+    )
+
+    match = await detect(tmp_path)
+
+    assert match is not None
+    assert (match.preset.name, match.tree) == ("laravel", tmp_path / "lang")
+    assert match.preset.syntax == "laravel"
 
 
 async def test_a_library_whose_locales_are_not_found_is_still_told(tmp_path: Path) -> None:
@@ -221,7 +242,9 @@ async def test_a_preset_can_be_named(examples: Path) -> None:
 
     assert match is not None
     assert (match.preset.name, match.reason, match.tree) == ("rails", "chosen", None)
-    with pytest.raises(PresetUnknown, match="no preset is called nope; the presets are nuxt-i18n"):
+    with pytest.raises(
+        PresetUnknown, match="no preset is called nope; the presets are laravel, nuxt-i18n"
+    ):
         await detect(examples / "i18next", "nope")
 
 
@@ -230,7 +253,7 @@ async def test_every_preset_is_listed_in_order() -> None:
 
     assert [preset.name for preset in listed] == [preset.name for preset in PRESETS]
     rails = next(preset for preset in listed if preset.name == "rails")
-    assert (rails.format, rails.placeholders) == ("yaml", ("rails",))
+    assert (rails.format, rails.placeholders, rails.syntax) == ("yaml", ("rails",), "standard")
 
 
 def test_the_table_is_sound() -> None:

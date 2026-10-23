@@ -2,6 +2,7 @@ import pytest
 
 from i18n_ai.domain.exports.locale import (
     IcuSyntaxError,
+    MessageSyntax,
     PlaceholderStyle,
     detect_styles,
     signature_of,
@@ -61,3 +62,23 @@ def test_unbalanced_braces_count_as_placeholders() -> None:
 def test_styles_are_detected() -> None:
     styles = detect_styles(["Hi {{name}}", "{n, plural, other {#}}", "<b>x</b>"])
     assert styles == {PlaceholderStyle.DOUBLE_BRACES, PlaceholderStyle.ICU, PlaceholderStyle.TAGS}
+
+
+LARAVEL = MessageSyntax.LARAVEL
+
+
+def test_laravel_placeholders_are_found_in_laravel_s_syntax_only() -> None:
+    assert signature_of("Welcome, :name!", quotes=False, syntax=LARAVEL).tokens == (":name",)
+    assert signature_of("Welcome, :name!", quotes=False).tokens == ()
+    assert detect_styles(["Hi :name"], LARAVEL) == {PlaceholderStyle.LARAVEL}
+    assert detect_styles(["Hi :name"]) == frozenset()
+
+
+def test_a_laravel_placeholder_is_its_name_whatever_its_case() -> None:
+    tokens = signature_of(":Name and :NAME met :name", quotes=False, syntax=LARAVEL).tokens
+    assert tokens == (":name", ":name", ":name")
+
+
+def test_a_colon_inside_a_word_is_not_a_laravel_placeholder() -> None:
+    for text in ("Ratio:high", "at 10:30", "mailto:me", "https://acme.test"):
+        assert signature_of(text, quotes=False, syntax=LARAVEL).tokens == (), text

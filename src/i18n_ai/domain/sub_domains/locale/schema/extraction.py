@@ -9,6 +9,7 @@ from ..placeholders.signature import Signature, detect_styles, signature_of, use
 from ..placeholders.tokens import PlaceholderStyle
 from ..vo.key_path import KeyPath
 from ..vo.locale_code import CARDINAL, ORDINAL, LocaleCode, PluralKind
+from ..vo.syntax import MessageSyntax
 
 _ORDER = ("zero", "one", "two", "few", "many", "other")  # CLDR's
 _CATEGORIES = frozenset(_ORDER)
@@ -63,7 +64,8 @@ class LocaleSchema:
     `item_other` in English become six keys in Arabic and one in Japanese; so does a nested one,
     Rails' `item: {one: ..., other: ...}`.
 
-    `quotes` says the document is ICU MessageFormat, where an apostrophe can quote."""
+    `quotes` says the document is ICU MessageFormat, where an apostrophe can quote; `syntax` is
+    its tree's."""
 
     source: LocaleCode
     target: LocaleCode
@@ -71,6 +73,7 @@ class LocaleSchema:
     template: dict[str, Any]
     styles: frozenset[PlaceholderStyle]
     quotes: bool
+    syntax: MessageSyntax = MessageSyntax.STANDARD
 
     def unit(self, unit_id: str) -> SourceUnit:
         return self._by_id[unit_id]
@@ -89,26 +92,38 @@ class LocaleSchema:
 
 
 def extract_schema(
-    document: LocaleDocument, source: LocaleCode, target: LocaleCode
+    document: LocaleDocument,
+    source: LocaleCode,
+    target: LocaleCode,
+    syntax: MessageSyntax = MessageSyntax.STANDARD,
 ) -> LocaleSchema:
-    """The schema of `document`'s translation from `source` into `target`."""
+    """The schema of `document`'s translation from `source` into `target`, in its tree's
+    `syntax`."""
     texts = list(document.strings())
-    builder = _Builder(target, quotes=uses_icu_quotes(texts), notes=document.notes)
+    builder = _Builder(target, uses_icu_quotes(texts), syntax, document.notes)
     template = builder.object(document.content, KeyPath())
     return LocaleSchema(
         source=source,
         target=target,
         units=tuple(builder.units),
         template=template,
-        styles=detect_styles(texts),
+        styles=detect_styles(texts, syntax),
         quotes=builder.quotes,
+        syntax=syntax,
     )
 
 
 class _Builder:
-    def __init__(self, target: LocaleCode, quotes: bool, notes: Mapping[KeyPath, str]) -> None:
+    def __init__(
+        self,
+        target: LocaleCode,
+        quotes: bool,
+        syntax: MessageSyntax,
+        notes: Mapping[KeyPath, str],
+    ) -> None:
         self.target = target
         self.quotes = quotes
+        self.syntax = syntax
         self.notes = notes
         self.units: list[SourceUnit] = []
 
@@ -177,7 +192,7 @@ class _Builder:
             id=str(len(self.units) + 1),
             path=path,
             source=text,
-            signature=signature_of(text, quotes=self.quotes),
+            signature=signature_of(text, quotes=self.quotes, syntax=self.syntax),
             plural=plural,
             note=note,
         )

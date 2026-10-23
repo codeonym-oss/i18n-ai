@@ -4,6 +4,8 @@ fill or render. Each is normalized, so that `{{ name }}` and `{{name}}` are the 
 import re
 from enum import StrEnum
 
+from ..vo.syntax import MessageSyntax
+
 
 class PlaceholderStyle(StrEnum):
     """A family of placeholders, as one library or another writes them."""
@@ -15,6 +17,7 @@ class PlaceholderStyle(StrEnum):
     NESTING = "nesting"  # i18next: $t(key)
     LINKED = "linked"  # vue-i18n: @:key, @.lower:key
     TAGS = "tags"  # html and react-i18next's <Trans>: <b>, </b>, <0/>, <br/>
+    LARAVEL = "laravel"  # laravel, in its own locales only: :name, :Name, :NAME
 
 
 DOUBLE_BRACES = re.compile(r"\{\{-?\s*([^{}]*?)\s*\}\}")
@@ -24,6 +27,9 @@ _PRINTF = re.compile(
 )
 _NESTING = re.compile(r"\$t\([^()]*\)")
 _LINKED = re.compile(r"@(?:\.[A-Za-z]+)?:(?:\{[^{}]*\}|[\w.\-]+)")
+# Laravel's `:name`, but not after a Latin letter or a digit: `Ratio:high` and `10:30` hold
+# none, while Japanese writes `りんご:count個`
+_LARAVEL = re.compile(r"(?<![A-Za-z0-9_]):[A-Za-z_][A-Za-z0-9_]*")
 _TAG = re.compile(r"<\s*(/)?\s*([A-Za-z0-9][\w.\-]*)(?:\s+[^<>]*?)?\s*(/)?\s*>")
 
 _FLAT = (
@@ -51,9 +57,11 @@ def mask_braced(text: str) -> tuple[str, list[str]]:
     return _BRACED.sub(swap, text), found
 
 
-def flat_tokens(text: str, braced: list[str]) -> list[str]:
+def flat_tokens(
+    text: str, braced: list[str], syntax: MessageSyntax = MessageSyntax.STANDARD
+) -> list[str]:
     """The placeholders in a stretch of masked text (see `mask_braced`), each as often as it
-    appears."""
+    appears; Laravel's `:name` in its `syntax`, in lower case, as Laravel fills every case."""
     tokens = [braced[int(index)] for index in _SENTINEL.findall(text)]
     text = _SENTINEL.sub(" ", text)
     for _, pattern in _FLAT:
@@ -63,11 +71,14 @@ def flat_tokens(text: str, braced: list[str]) -> list[str]:
         closing, name, self_closing = match.group(1), match.group(2), match.group(3)
         tokens.append(f"</{name}>" if closing else f"<{name}/>" if self_closing else f"<{name}>")
     text = _TAG.sub(" ", text)
+    if syntax == MessageSyntax.LARAVEL:
+        tokens.extend(match.group(0).lower() for match in _LARAVEL.finditer(text))
+        text = _LARAVEL.sub(" ", text)
     tokens.extend(match.group(0) for match in _PRINTF.finditer(text))
     return tokens
 
 
-def styles_in(text: str) -> set[PlaceholderStyle]:
+def styles_in(text: str, syntax: MessageSyntax = MessageSyntax.STANDARD) -> set[PlaceholderStyle]:
     """The families of placeholders `text` uses; ICU is told apart by the caller."""
     styles: set[PlaceholderStyle] = set()
     if DOUBLE_BRACES.search(text):
@@ -77,6 +88,8 @@ def styles_in(text: str) -> set[PlaceholderStyle]:
             styles.add(style)
     if _TAG.search(text):
         styles.add(PlaceholderStyle.TAGS)
+    if syntax == MessageSyntax.LARAVEL and _LARAVEL.search(text):
+        styles.add(PlaceholderStyle.LARAVEL)
     if _PRINTF.search(DOUBLE_BRACES.sub(" ", text)):
         styles.add(PlaceholderStyle.PRINTF)
     return styles

@@ -8,11 +8,12 @@ from i18n_ai.domain.exports.locale import (
     LocaleCode,
     LocaleFormat,
     LocaleTreeNotFound,
+    MessageSyntax,
     MixedLocaleFormats,
     SourceLocaleUnknown,
     TreeLayout,
 )
-from i18n_ai.infra.adapters.filesystem import FileSystemLocaleTreeScanner
+from i18n_ai.infra.adapters.filesystem import FileSystemLocaleStore, FileSystemLocaleTreeScanner
 from i18n_ai.infra.adapters.filesystem.formats.json_format import detect_style
 
 
@@ -79,6 +80,7 @@ async def test_detect_finds_every_tree_in_a_project(examples: Path) -> None:
         ("gnu/po", "file", "po"),
         ("i18next/locales", "directory", "json"),
         ("icu/messages", "file", "json"),
+        ("laravel/lang", "file", "json"),
         ("symfony/translations", "file", "xliff"),
         ("vue-i18n/locales", "file", "yaml"),
         ("angular/src/locale", "file", "xliff"),
@@ -328,3 +330,82 @@ async def test_a_preferred_format_is_read_alone_in_a_mixed_tree(tmp_path: Path) 
 
     with pytest.raises(MixedLocaleFormats):
         await scanner.scan(TreeRequest(tmp_path, preferred=LocaleFormat.ARB))
+
+
+def laravel(path: Path, source: str | None = None) -> TreeRequest:
+    return TreeRequest(
+        path, source=LocaleCode(source) if source else None, syntax=MessageSyntax.LARAVEL
+    )
+
+
+def write_lang(root: Path, files: dict[str, str]) -> Path:
+    for name, content in files.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_text(content, encoding="utf-8")
+    return root
+
+
+async def test_a_laravel_tree_without_its_source_takes_its_keys(tmp_path: Path) -> None:
+    lang = write_lang(
+        tmp_path / "lang",
+        {
+            "fr.json": '{\n    "Hello": "Bonjour",\n    "Bye": "Salut"\n}\n',
+            "de.json": '{"Bye": "Tschüss", "Thanks": "Danke", "n": 3}',
+            "en/auth.php": "<?php return ['failed' => 'Nope'];",
+            "vendor/pkg/fr.json": '{"Pkg": "Pkg"}',
+        },
+    )
+
+    tree = await FileSystemLocaleTreeScanner().scan(laravel(lang))
+
+    assert (tree.layout, tree.source.value, tree.syntax) == (
+        TreeLayout.FILE, "en", MessageSyntax.LARAVEL
+    )  # fmt: skip
+    assert tree.source_from == ("de.json", "fr.json")
+    assert [locale.value for locale in tree.existing] == ["de", "fr"]
+    [file] = tree.files
+    assert str(file.name) == "en.json"
+    assert file.document is not None
+    assert file.document.content == {"Bye": "Bye", "Thanks": "Thanks", "Hello": "Hello"}
+    assert tree.target_location(LocaleCode("es"), file).path == lang / "es.json"
+    assert tree.target_location(LocaleCode("fr"), file).path == lang / "fr.json"
+
+
+async def test_a_laravel_tree_with_its_source_reads_it(tmp_path: Path) -> None:
+    lang = write_lang(
+        tmp_path / "lang",
+        {"en.json": '{"Hello": "Hello!"}', "fr.json": '{"Hello": "Salut !"}', "en/a.php": ""},
+    )
+
+    tree = await FileSystemLocaleTreeScanner().scan(laravel(lang))
+
+    assert (tree.source.value, tree.source_from) == ("en", ())
+    assert tree.files[0].path == lang / "en.json"
+    assert tree.files[0].document is not None
+    assert tree.files[0].document.content == {"Hello": "Hello!"}
+
+    tree = await FileSystemLocaleTreeScanner().scan(laravel(lang, "fr"))
+    assert tree.files[0].path == lang / "fr.json"
+    assert [locale.value for locale in tree.existing] == ["en"]
+
+    tree = await FileSystemLocaleTreeScanner().scan(laravel(lang / "fr.json"))
+    assert tree.source.value == "en"  # a file names its tree, not its source
+
+
+async def test_a_laravel_target_is_written_as_its_first_locale_file(tmp_path: Path) -> None:
+    lang = write_lang(tmp_path / "lang", {"de.json": '{\n\t"A": "Ä"\n}', "fr.json": '{"A": "À"}'})
+
+    tree = await FileSystemLocaleTreeScanner().scan(laravel(lang))
+    target = tree.target_location(LocaleCode("es"), tree.files[0])
+    await FileSystemLocaleStore().write(target, {"A": "Á"}, tree.files[0])
+
+    assert (lang / "es.json").read_text(encoding="utf-8") == '{\n\t"A": "Á"\n}'
+
+
+async def test_without_laravel_s_syntax_the_tree_is_read_as_any(tmp_path: Path) -> None:
+    lang = write_lang(tmp_path / "lang", {"fr.json": "{}", "de.json": "{}"})
+
+    with pytest.raises(SourceLocaleUnknown):
+        await FileSystemLocaleTreeScanner().scan(TreeRequest(lang))
+    tree = await FileSystemLocaleTreeScanner().scan(TreeRequest(lang, source=LocaleCode("fr")))
+    assert (tree.syntax, tree.source_from) == (MessageSyntax.STANDARD, ())
