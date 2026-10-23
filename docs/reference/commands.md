@@ -48,10 +48,21 @@ cannot tell it), model or API key is asked for; see [Getting started](../guide/g
 
 | Command | |
 |---|---|
-| `providers list` | Every provider LangChain knows, its package, whether it is installed, and its API key's variable and whether it is set. |
+| `providers list` | Every provider LangChain knows, its package, whether it is installed, and its API key's variable and where that key comes from. |
 | `providers models PROVIDER` | The provider's models, from its API, the recommended first, then the newest. Exit 2, with the reason, when the list cannot be read (no key, no network). |
 | `providers check MODEL` | A model's provider and package, and whether it is installed (exit 1 if not). |
 | `providers install PROVIDER` | Install a provider's package, unless it is there. |
+
+## `i18n-ai auth`
+
+| Command | |
+|---|---|
+| `auth login [PROVIDER]` | Save the provider's API key in the system keyring. The key is asked for, hidden, or read from stdin when piped. Exit 2 when there is no keyring, the provider takes no key, or no key was given. |
+| `auth logout [PROVIDER]` | Remove the provider's key from the system keyring; `--all` removes every provider's. |
+| `auth status` | The system keyring, and for each provider where its key comes from: the environment, the `.env`, or the keyring. Never the keys. |
+
+At a terminal, a missing provider is asked for. A key is looked up in the environment, then the
+`.env`, then the keyring, and the first found wins.
 
 ## Exit codes
 
@@ -68,7 +79,8 @@ cannot tell it), model or API key is asked for; see [Getting started](../guide/g
 |---|---|
 | `I18N_AI_MODEL` | The default `--model`. |
 | `I18N_AI_BATCH_SIZE`, `I18N_AI_CONCURRENCY`, `I18N_AI_MAX_ATTEMPTS` | The defaults of those options. |
-| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_HOST`, … | The provider's own settings. |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_HOST`, … | The provider's own settings. A key set here wins over the one in the keyring. |
+| `PYTHON_KEYRING_BACKEND` | `keyring`'s own: the keyring to use, e.g. `keyring.backends.fail.Keyring` for none. |
 | `I18N_AI_STATE_DIR` | Where the interactive mode remembers its answers. Default: `~/.local/state/i18n-ai`, `~/Library/Application Support/i18n-ai` or `%LOCALAPPDATA%\i18n-ai`. |
 | `CI` | When true, nothing is asked, as with `--no-input`. |
 

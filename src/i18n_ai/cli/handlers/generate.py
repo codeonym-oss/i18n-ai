@@ -196,7 +196,7 @@ def generate(
             return 2
         status = await mediator.send(GetProviderStatusQuery(ModelSpec(spec)))
         if wizard is not None and status.key and not status.key_set:
-            await wizard.key(status.key)
+            await wizard.key(status.provider, status.key)
         if status.installed:
             console.print(
                 f"Model [cyan]{status.provider}:{status.model}[/] [dim]({status.package}, "

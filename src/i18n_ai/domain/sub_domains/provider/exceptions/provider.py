@@ -24,3 +24,15 @@ class ProviderNotInstalled(DomainException):
             error_code="PROVIDER_NOT_INSTALLED",
             details={"provider": provider, "package": package},
         )
+
+
+class ProviderTakesNoKey(DomainException):
+    """A provider without an API key of its own: it takes none (ollama), or several settings
+    (bedrock, vertex)."""
+
+    def __init__(self, provider: str) -> None:
+        super().__init__(
+            message=f"the {provider} provider takes no API key; it reads its own settings",
+            error_code="PROVIDER_TAKES_NO_KEY",
+            details={"provider": provider},
+        )

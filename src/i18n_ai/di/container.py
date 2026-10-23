@@ -3,7 +3,13 @@ from mediary import Mediator
 from mediary.ext.dishka import MediaryProvider
 from rich.console import Console
 
-from .platform import ConsoleProvider, FileSystemProvider, LangChainProvider, PackagesProvider
+from .platform import (
+    ConsoleProvider,
+    CredentialsProvider,
+    FileSystemProvider,
+    LangChainProvider,
+    PackagesProvider,
+)
 
 
 def build_container(mediator: Mediator, console: Console, *overrides: Provider) -> AsyncContainer:
@@ -13,6 +19,7 @@ def build_container(mediator: Mediator, console: Console, *overrides: Provider) 
     return make_async_container(
         # 1. Platform
         FileSystemProvider(),
+        CredentialsProvider(),
         LangChainProvider(),
         PackagesProvider(),
         ConsoleProvider(),
