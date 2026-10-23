@@ -1,0 +1,32 @@
+{
+  "@@locale": "en",
+  "@@x-reviewed": "2026-10-01",
+  "appTitle": "Acme Notes",
+  "@appTitle": {
+    "description": "The app's name, in the title bar"
+  },
+  "greeting": "Hello {name}!",
+  "@greeting": {
+    "description": "Shown on the home screen",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Ada"
+      }
+    }
+  },
+  "noteCount": "{count, plural, =0{No notes} =1{One note} other{{count} notes}}",
+  "@noteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "role": "{role, select, admin{Administrator} other{Member}}",
+  "@role": {
+    "placeholders": {
+      "role": {}
+    }
+  }
+}

@@ -1,7 +1,8 @@
 """Finding a locale tree from the path a user gives:
 
 - a locale directory, `locales/en`: the directory layout, its siblings the other locales;
-- a locale file, `messages/en.json`: the file layout, its siblings the other locales;
+- a locale file, `messages/en.json`: the file layout, its siblings the other locales; their
+  names may share a prefix, as Flutter's `app_en.arb` and `app_fr.arb`;
 - a bundle, `i18n.json` holding `{"en": {...}, "fr": {...}}`: the bundle layout;
 - the directory holding the locales, `locales/`: whichever of the first two it holds, with the
   source named, or `en` when there is one, or the only locale.
@@ -12,6 +13,7 @@ key is its locale, as Rails writes `en.yml`, holds its messages under that key.
 `detect` looks for those trees under a project, for the user to pick one."""
 
 import fnmatch
+import re
 from collections import deque
 from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
@@ -32,6 +34,8 @@ from ....domain.exports.locale import (
 from .formats import FileFormat, extensions, format_of, load_document
 
 _SKIPPED = {"node_modules", "__pycache__", "dist", "build"}
+# Where a locale file's name prefix ends: `app_`, `messages-`, `strings.`
+_PREFIX_END = re.compile(r"[_.-]")
 _DEFAULT_SOURCE = LocaleCode("en")
 
 # How far `detect` looks: the directories below the project's, and how many at most.
@@ -97,9 +101,9 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
         if adapter is None or (request.format is not None and adapter.format != request.format):
             wanted = ", ".join(extensions(request.format))
             raise LocaleTreeNotFound(str(path), f"it is not a locale file ({wanted})")
-        locale = _locale_of(path.stem, request.source)
-        if locale is not None:
-            return self._file_layout(path.parent, path, locale, request)
+        named = _named(path.stem, request.source)
+        if named is not None:
+            return self._file_layout(path.parent, path, named[1], request)
 
         try:
             content = adapter.read(path)
@@ -129,8 +133,9 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
     ) -> LocaleTree:
         adapter = format_of(path)
         assert adapter is not None
-        siblings = [file for file in root.glob(f"*{path.suffix}") if file.is_file()]
-        existing = _locales(file.stem for file in siblings if file != path)
+        prefix = _prefix(path.stem, source)
+        siblings = [file for file in root.glob(f"{prefix}*{path.suffix}") if file.is_file()]
+        existing = _locales(file.stem.removeprefix(prefix) for file in siblings if file != path)
         return LocaleTree(
             root=root,
             layout=TreeLayout.FILE,
@@ -139,6 +144,7 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             existing=existing,
             output=_output(request, root),
             format=adapter.format,
+            prefix=prefix,
         )
 
     # The path is a directory: a locale's, or the one holding the locales
@@ -154,19 +160,18 @@ class FileSystemLocaleTreeScanner(ILocaleTreeScanner):
             source = _choose_source(str(path), locale_directories, request.source)
             return self._directory_layout(path, directories[source.value], source, request)
 
-        files = [
-            child
-            for child in sorted(path.iterdir())
-            if child.suffix.lower() in extensions(request.format)
-            and child.is_file()
-            and LocaleCode.recognized(child.stem) is not None
-        ]
-        _one_format(path, files)
-        by_stem = {child.stem: child for child in files}
-        locale_files = _locales(by_stem)
+        by_locale: dict[str, Path] = {}
+        for child in sorted(path.iterdir()):
+            if child.suffix.lower() not in extensions(request.format) or not child.is_file():
+                continue
+            named = _named(child.stem, None)
+            if named is not None:
+                by_locale.setdefault(named[1].value, child)  # unprefixed first: `en` < `app_en`
+        _one_format(path, list(by_locale.values()))
+        locale_files = _locales(by_locale)
         if locale_files:
             source = _choose_source(str(path), locale_files, request.source)
-            return self._file_layout(path, by_stem[source.value], source, request)
+            return self._file_layout(path, by_locale[source.value], source, request)
 
         raise LocaleTreeNotFound(
             str(path), "it holds no locale directory (en/) and no locale file (en.json, en.yml)"
@@ -246,9 +251,11 @@ def _tree_in(directory: Path, children: list[Path]) -> TreeCandidate | None:
             _formats(formats[locale.value] for locale in locale_directories),
         )
     files = {
-        child.stem: {adapter.format}
+        named[1].value: {adapter.format}
         for child in children
-        if (adapter := format_of(child)) is not None and child.is_file()
+        if (adapter := format_of(child)) is not None
+        and child.is_file()
+        and (named := _named(child.stem, None)) is not None
     }
     locale_files = _detected(directory, files)
     if locale_files:
@@ -281,7 +288,7 @@ def _bundles_in(children: list[Path]) -> list[TreeCandidate]:
     bundles = []
     for child in children:
         adapter = format_of(child)
-        if adapter is None or LocaleCode.recognized(child.stem) is not None:
+        if adapter is None or _named(child.stem, None) is not None:
             continue
         try:
             if not child.is_file() or child.stat().st_size > _BUNDLE_BYTES:
@@ -305,6 +312,24 @@ def _locale_of(name: str, source: LocaleCode | None) -> LocaleCode | None:
     if source is not None and locale.same_as(source):
         return locale
     return LocaleCode.recognized(name)
+
+
+def _named(stem: str, source: LocaleCode | None) -> tuple[str, LocaleCode] | None:
+    """A locale file's name prefix and locale: `("", en)` for `en`, `("app_", en)` for
+    `app_en`, `("app_", pt_BR)` for `app_pt_BR`; None when no part of it is a locale."""
+    locale = _locale_of(stem, source)
+    if locale is not None:
+        return "", locale
+    for separator in _PREFIX_END.finditer(stem):
+        locale = _locale_of(stem[separator.end() :], source)
+        if locale is not None:
+            return stem[: separator.end()], locale
+    return None
+
+
+def _prefix(stem: str, source: LocaleCode) -> str:
+    named = _named(stem, source)
+    return named[0] if named is not None else ""
 
 
 def _locales(names: Iterable[str]) -> tuple[LocaleCode, ...]:

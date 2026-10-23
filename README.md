@@ -19,7 +19,8 @@ i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clin
   (`messages/en.json`, Rails' `config/locales/en.yml`), or one bundle holding them all
   (`{"en": {...}, "fr": {...}}`). The targets are written beside the source, the way it is
   written (indent, line endings, UTF-8).
-- **JSON and YAML.** YAML targets keep the source's comments, key order and quoting.
+- **JSON, YAML and ARB.** YAML targets keep the source's comments, key order and quoting. Flutter's
+  ARB targets get their own `@@locale` and the source's messages, its metadata left out.
 - **A precheck first.** The tree, its source files and whether each qualifies, and what each target
   needs, shown before anything is sent to a model, for you to confirm.
 - **Parallel agents.** LangGraph classifies every file in parallel, then runs one agent per

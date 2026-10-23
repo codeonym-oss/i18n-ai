@@ -26,10 +26,12 @@ class SourceFile:
 @dataclass(frozen=True)
 class TargetLocation:
     """Where a target locale's version of a source file goes: a file, and the key under which
-    it goes in a bundle or a file rooted at its locale."""
+    it goes in a bundle or a file rooted at its locale. `locale` is the target as the tree
+    spells it, for a format that names its locale inside the file (ARB's `@@locale`)."""
 
     path: Path
     bundle_key: str | None = None
+    locale: str | None = None
 
 
 @dataclass(frozen=True)
@@ -48,26 +50,29 @@ class LocaleTree:
     existing: tuple[LocaleCode, ...]
     output: Path
     format: LocaleFormat = LocaleFormat.JSON
+    prefix: str = ""
 
     @property
     def source_path(self) -> Path:
         if self.layout == TreeLayout.DIRECTORY:
             return self.root / self.source.value
         if self.layout == TreeLayout.FILE:
-            return self.files[0].path if self.files else self.root / self.source.value
+            return self.files[0].path if self.files else self.root / f"{self.prefix}{self.source}"
         return self.root
 
     def target_location(self, target: LocaleCode, file: SourceFile) -> TargetLocation:
         """Where `target`'s version of `file` goes. A locale that already exists keeps its own
-        spelling, so `pt_BR/` is filled though `pt-BR` was asked."""
+        spelling, so `pt_BR/` is filled though `pt-BR` was asked; a new one is spelled as the
+        format spells it."""
         name = self._existing_spelling(target)
         key = name if file.root_key is not None else None
         if self.layout == TreeLayout.DIRECTORY:
-            return TargetLocation(self.output / name / Path(file.name), key)
+            return TargetLocation(self.output / name / Path(file.name), key, name)
         if self.layout == TreeLayout.FILE:
-            return TargetLocation(self.output / f"{name}{file.path.suffix}", key)
+            path = self.output / f"{self.prefix}{name}{file.path.suffix}"
+            return TargetLocation(path, key, name)
         output = self.output if self.output.suffix else self.output / self.root.name
-        return TargetLocation(output, bundle_key=name)
+        return TargetLocation(output, bundle_key=name, locale=name)
 
     def has(self, locale: LocaleCode) -> bool:
         return any(existing.same_as(locale) for existing in self.existing)
@@ -76,4 +81,4 @@ class LocaleTree:
         for existing in self.existing:
             if existing.same_as(target):
                 return existing.value
-        return target.value
+        return target.value.replace("-", self.format.locale_separator)

@@ -24,4 +24,4 @@ class FileSystemLocaleStore(ILocaleStore):
     ) -> None:
         adapter = format_of(like.path)
         assert adapter is not None, f"{like.path} was read, so its format is known"
-        adapter.write(location.path, content, like, location.bundle_key)
+        adapter.write(location.path, content, like, location.bundle_key, location.locale)

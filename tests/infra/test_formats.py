@@ -1,5 +1,6 @@
 """The locale file formats: what is read, and a target written the way its source is."""
 
+import json
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -7,9 +8,22 @@ import pytest
 
 from i18n_ai.domain.exports.locale import SourceFile
 from i18n_ai.infra.adapters.filesystem.formats import FORMATS, format_of, load_document
+from i18n_ai.infra.adapters.filesystem.formats.arb_format import ArbFormat
 from i18n_ai.infra.adapters.filesystem.formats.yaml_format import YamlFormat
 
 yaml = YamlFormat()
+arb = ArbFormat()
+
+ARB = """\
+{
+    "@@locale": "en",
+    "@@x-team": "web",
+    "title": "Notes",
+    "@title": {"description": "The app's name"},
+    "count": "{n, plural, one{# note} other{# notes}}",
+    "@count": {"placeholders": {"n": {"type": "int"}}}
+}
+"""
 
 SOURCE = """\
 # The shop's messages
@@ -172,9 +186,38 @@ def test_an_empty_file_is_no_document(tmp_path: Path) -> None:
     assert error == "its top level is nothing, not an object"
 
 
+def test_arb_is_read_without_its_metadata(tmp_path: Path) -> None:
+    content = arb.read(source(tmp_path, ARB, "app_en.arb").path)
+
+    assert content == {"title": "Notes", "count": "{n, plural, one{# note} other{# notes}}"}
+
+
+def test_an_arb_target_names_its_locale_and_keeps_its_own_metadata(tmp_path: Path) -> None:
+    like = source(tmp_path, ARB, "app_en.arb")
+    target = tmp_path / "app_fr.arb"
+    target.write_text('{"@@locale": "fr", "title": "Old", "@title": {"description": "Le nom"}}')
+
+    arb.write(target, {"title": "Notes", "count": "{n, plural, other{# notes}}"}, like, None, "fr")
+
+    written = json.loads(target.read_text())
+    assert list(written) == ["@@locale", "@@x-team", "title", "@title", "count"]
+    assert written["@@locale"] == "fr"
+    assert written["@title"] == {"description": "Le nom"}  # its own, not the source's
+    assert target.read_text().startswith('{\n    "@@locale"')  # the source's indent
+
+
+def test_an_arb_target_without_locale_in_its_source_gets_none(tmp_path: Path) -> None:
+    like = source(tmp_path, '{"a": "A"}', "app_en.arb")
+
+    arb.write(tmp_path / "app_de.arb", {"a": "Ah"}, like, None, "de")
+
+    assert json.loads((tmp_path / "app_de.arb").read_text()) == {"a": "Ah"}
+
+
 def test_formats_by_extension() -> None:
     assert format_of(Path("a.YAML")) is FORMATS[yaml.format]
     assert format_of(Path("a.json")) is not None
+    assert format_of(Path("app_en.arb")) is FORMATS[arb.format]
     assert format_of(Path("a.po")) is None
 
 

@@ -20,7 +20,15 @@ class FileFormat(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def write(self, path: Path, content: dict[str, Any], like: SourceFile, key: str | None) -> None:
+    def write(
+        self,
+        path: Path,
+        content: dict[str, Any],
+        like: SourceFile,
+        key: str | None,
+        locale: str | None = None,
+    ) -> None:
         """Write `content` to `path` as `like` is written. Under `key` when given: in the file
-        already at `path`, keeping its other keys, else in a new one."""
+        already at `path`, keeping its other keys, else in a new one. `locale` is the target's,
+        for a format that names it in the file."""
         raise NotImplementedError

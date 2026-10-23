@@ -3,12 +3,13 @@
 from pathlib import Path
 
 from .....domain.exports.locale import LocaleDocument, LocaleFormat
+from .arb_format import ArbFormat
 from .base import FileFormat
 from .json_format import JsonFormat
 from .yaml_format import YamlFormat
 
 FORMATS: dict[LocaleFormat, FileFormat] = {
-    adapter.format: adapter for adapter in (JsonFormat(), YamlFormat())
+    adapter.format: adapter for adapter in (JsonFormat(), YamlFormat(), ArbFormat())
 }
 
 

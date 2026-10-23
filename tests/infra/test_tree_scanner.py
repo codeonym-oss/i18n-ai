@@ -77,6 +77,7 @@ async def test_detect_finds_every_tree_in_a_project(examples: Path) -> None:
         ("i18next/locales", "directory", "json"),
         ("icu/messages", "file", "json"),
         ("vue-i18n/locales", "file", "yaml"),
+        ("flutter/lib/l10n", "file", "arb"),
         ("rails/config/locales", "file", "yaml"),
     ]
     assert [locale.value for locale in found[1].locales] == ["en", "fr"]
@@ -167,7 +168,37 @@ async def test_a_file_in_another_format_is_not_a_tree(tmp_path: Path) -> None:
     (tmp_path / "en.json").write_text('{"a": "A"}')
     scanner = FileSystemLocaleTreeScanner()
 
-    with pytest.raises(LocaleTreeNotFound, match=r"\(\.json, \.yml, \.yaml\)"):
+    with pytest.raises(LocaleTreeNotFound, match=r"\(\.json, \.yml, \.yaml, \.arb\)"):
         await scanner.scan(TreeRequest(tmp_path / "en.po"))
     with pytest.raises(LocaleTreeNotFound, match=r"\(\.yml, \.yaml\)"):
         await scanner.scan(TreeRequest(tmp_path / "en.json", format=LocaleFormat.YAML))
+
+
+async def test_locale_files_may_share_a_prefix(tmp_path: Path) -> None:
+    for name in ("app_en.arb", "app_pt_BR.arb", "app.arb", "other_de.arb"):
+        (tmp_path / name).write_text('{"a": "A"}')
+    scanner = FileSystemLocaleTreeScanner()
+
+    tree = await scanner.scan(TreeRequest(tmp_path))
+
+    assert tree.format == LocaleFormat.ARB
+    assert tree.prefix == "app_"
+    assert tree.files[0].path == tmp_path / "app_en.arb"
+    assert [locale.value for locale in tree.existing] == ["pt_BR"]
+    assert tree.target_location(LocaleCode("pt-BR"), tree.files[0]).path == (
+        tmp_path / "app_pt_BR.arb"
+    )
+    assert await scanner.scan(TreeRequest(tmp_path / "app_en.arb")) == tree
+
+
+async def test_a_new_arb_locale_is_spelled_with_an_underscore(tmp_path: Path) -> None:
+    (tmp_path / "intl_en.arb").write_text('{"a": "A"}')
+    (tmp_path / "en.json").write_text('{"a": "A"}')
+
+    arb = await FileSystemLocaleTreeScanner().scan(TreeRequest(tmp_path / "intl_en.arb"))
+    json = await FileSystemLocaleTreeScanner().scan(TreeRequest(tmp_path / "en.json"))
+
+    location = arb.target_location(LocaleCode("zh-Hant-TW"), arb.files[0])
+    assert location.path == tmp_path / "intl_zh_Hant_TW.arb"
+    assert location.locale == "zh_Hant_TW"
+    assert json.target_location(LocaleCode("pt-BR"), json.files[0]).path == tmp_path / "pt-BR.json"
