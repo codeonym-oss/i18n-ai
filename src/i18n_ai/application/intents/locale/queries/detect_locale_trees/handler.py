@@ -28,6 +28,7 @@ class DetectLocaleTreesQueryHandler(
                     layout=candidate.layout.value,
                     locales=tuple(locale.value for locale in candidate.locales),
                     source=source.value if source is not None else None,
+                    formats=tuple(format.value for format in candidate.formats),
                 )
             )
         return tuple(views)

@@ -37,3 +37,17 @@ class TargetIsSource(DomainException):
             error_code="TARGET_IS_SOURCE",
             details={"locale": locale},
         )
+
+
+class MixedLocaleFormats(DomainException):
+    """The source's files are in several formats, and none was chosen."""
+
+    def __init__(self, path: str, formats: list[str]) -> None:
+        super().__init__(
+            message=(
+                f"{path} mixes the formats {', '.join(formats)}; "
+                "choose the one to translate with --format"
+            ),
+            error_code="MIXED_LOCALE_FORMATS",
+            details={"path": path, "formats": formats},
+        )

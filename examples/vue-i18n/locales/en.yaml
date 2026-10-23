@@ -1,0 +1,12 @@
+# The storefront's messages, read by vue-i18n.
+app:
+  title: Acme Store
+  greeting: "Hello, {name}!"
+cart:
+  # vue-i18n's plurals: the forms separated by a pipe
+  apples: "no apples | one apple | {count} apples"
+  checkout: "@:app.title checkout"
+footer:
+  links:
+  - About us
+  - Contact

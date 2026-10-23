@@ -178,3 +178,49 @@ async def test_the_scan_refuses_the_source_as_a_target(mediator: Mediator, examp
         await mediator.send(
             ScanLocaleTreeQuery(TreeRequest(examples / "i18next" / "locales"), codes("EN"))
         )
+
+
+async def test_a_rails_tree_keeps_its_comments_and_its_root(
+    mediator: Mediator, examples: Path
+) -> None:
+    locales = examples / "rails" / "config" / "locales"
+
+    receipt = await mediator.send(GenerateLocalesCommand(TreeRequest(locales), codes("fr"), MODEL))
+
+    assert receipt.ok
+    french = (locales / "fr.yml").read_text(encoding="utf-8")
+    assert french.startswith("# Files in the config/locales directory")
+    assert '\nfr:\n  hello: "[fr] Hello world"\n' in french
+    assert "      title: '[fr] Users' # the page's heading\n" in french
+    assert "      bio: |\n        [fr] Tell us about yourself.\n" in french
+    assert "  # The settings page\n" in french
+    assert "      - :year\n" in french  # a symbol, not text
+    assert "    per_page: 25\n" in french
+
+
+async def test_a_rooted_target_keeps_its_good_translations(
+    mediator: Mediator, examples: Path, gateway: FakeGateway
+) -> None:
+    locales = examples / "rails" / "config" / "locales"
+    (locales / "de.yml").write_text('de:\n  hello: "Hallo Welt"\n', encoding="utf-8")
+
+    await mediator.send(GenerateLocalesCommand(TreeRequest(locales), codes("de"), MODEL))
+
+    german = (locales / "de.yml").read_text(encoding="utf-8")
+    assert 'hello: "Hallo Welt"' in german
+    sent = [unit.source for batch in gateway.batches for unit in batch.units]
+    assert "Hello world" not in sent
+
+
+async def test_a_vue_i18n_tree_in_yaml(mediator: Mediator, examples: Path) -> None:
+    locales = examples / "vue-i18n" / "locales"
+
+    report = await mediator.send(ScanLocaleTreeQuery(TreeRequest(locales), codes("ja")))
+    await mediator.send(GenerateLocalesCommand(TreeRequest(locales), codes("ja"), MODEL))
+
+    assert report.format == "yaml"
+    assert report.targets[0].files[0].path == locales / "ja.yaml"
+    japanese = (locales / "ja.yaml").read_text(encoding="utf-8")
+    assert japanese.startswith("# The storefront's messages, read by vue-i18n.\napp:\n")
+    assert '  checkout: "[ja] @:app.title checkout"\n' in japanese
+    assert "  links:\n  - '[ja] About us'\n" in japanese

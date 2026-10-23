@@ -12,7 +12,7 @@ from ...application.exports.locale import (
 )
 from ...application.exports.provider import GetProviderStatusQuery, InstallProviderCommand
 from ...di import Bootstrap
-from ...domain.exports.locale import SourceLocaleUnknown
+from ...domain.exports.locale import LocaleFormat, SourceLocaleUnknown
 from ...domain.exports.provider import ModelSpec
 from ...runtime.answers import Answers, load_answers
 from .. import interactive
@@ -74,6 +74,15 @@ def generate(
     exclude: Annotated[
         list[str] | None,
         typer.Option("--exclude", help="Leave out the source files matching this glob."),
+    ] = None,
+    format: Annotated[
+        LocaleFormat | None,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Read only the locale files in this format, when the tree mixes several.",
+            case_sensitive=False,
+        ),
     ] = None,
     overwrite: Annotated[
         bool,
@@ -159,7 +168,7 @@ def generate(
             return Confirm.ask(question, console=console, default=True)
 
         # 0. What the run was not told, asked: the tree, its source, the targets, the output
-        tree = tree_request(path or Path(), source, output, include, exclude)
+        tree = tree_request(path or Path(), source, output, include, exclude, format)
         targets_ = codes
         if wizard is not None:
             if path is None:
@@ -258,7 +267,7 @@ def generate(
                 spec,
                 tree.source,
                 wizard.shown(tree.output) if tree.output else None,
-                _flags(context, include, exclude, overwrite, strict, classify),
+                _flags(context, include, exclude, format, overwrite, strict, classify),
             )
             console.print(f"\nTo run it again: [bold]{line}[/]")
         return 0 if generation.ok else 1
@@ -270,6 +279,7 @@ def _flags(
     context: str | None,
     include: list[str] | None,
     exclude: list[str] | None,
+    format: LocaleFormat | None,
     overwrite: bool,
     strict: bool,
     classify: bool,
@@ -280,5 +290,7 @@ def _flags(
         flags += ["--include", pattern]
     for pattern in exclude or []:
         flags += ["--exclude", pattern]
+    if format is not None:
+        flags += ["--format", format.value]
     flags += [flag for flag, on in (("--overwrite", overwrite), ("--strict", strict)) if on]
     return flags if classify else [*flags, "--no-classify"]

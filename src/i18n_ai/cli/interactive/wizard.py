@@ -59,7 +59,8 @@ class Wizard:
         choices = [
             Choice(
                 self.shown(candidate.path),
-                f"{self.shown(candidate.path)}  [{candidate.layout}: {_some(candidate.locales)}]",
+                f"{self.shown(candidate.path)}  "
+                f"[{candidate.layout}, {'+'.join(candidate.formats)}: {_some(candidate.locales)}]",
             )
             for candidate in candidates
         ]

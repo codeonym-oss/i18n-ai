@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Any
 
-from ..entities.document import LocaleDocument
+from ..entities.document import LocaleDocument, is_message
 from ..placeholders.signature import Signature, detect_styles, signature_of, uses_icu_quotes
 from ..placeholders.tokens import PlaceholderStyle
 from ..vo.key_path import KeyPath
@@ -111,7 +111,7 @@ class _Builder:
             return self.object(value, path)
         if isinstance(value, list):
             return [self.node(item, path.child(index)) for index, item in enumerate(value)]
-        if isinstance(value, str) and value.strip():
+        if is_message(value):
             return self.slot(path, value, None)
         return value
 
@@ -138,7 +138,7 @@ class _Builder:
                 target_key = prefix + category
                 form = PluralForm(kind, category, source_category)
                 rendered[target_key] = (
-                    self.slot(path.child(target_key), text, form) if text.strip() else text
+                    self.slot(path.child(target_key), text, form) if is_message(text) else text
                 )
         return rendered
 

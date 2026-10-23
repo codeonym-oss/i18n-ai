@@ -135,8 +135,7 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
         if event.failures and strict:
             status = ResultStatus.REFUSED
         else:
-            assert job.file.document is not None
-            await self._store.write(location, event.content, job.file.document.style)
+            await self._store.write(location, event.content, job.file)
         return FileResult(
             file=name,
             target=target,

@@ -28,6 +28,8 @@ dependencies = [
     # The prompts of the interactive mode, and the providers' model lists.
     "questionary>=2.1",
     "httpx>=0.27",
+    # YAML locales, read and written round-trip: comments, order and quoting kept.
+    "ruamel-yaml>=0.18",
 ]
 keywords = [
     "i18n", "l10n", "localization", "translation", "locales", "i18next", "icu", "messageformat",
@@ -176,7 +178,7 @@ type = "forbidden"
 source_modules = ["i18n_ai.domain", "i18n_ai.application"]
 forbidden_modules = [
     "langchain", "langchain_core", "langgraph", "typer", "rich", "dishka", "dotenv", "questionary",
-    "httpx", "keyring",
+    "httpx", "keyring", "ruamel",
 ]
 allow_indirect_imports = true
 
