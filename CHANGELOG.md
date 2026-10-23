@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.2.0...v0.3.0) (2026-10-23)
+
+
+### Features
+
+* translate Laravel's JSON locales, keeping their :name placeholders ([#17](https://github.com/codeonym-oss/i18n-ai/issues/17)) ([#27](https://github.com/codeonym-oss/i18n-ai/issues/27)) ([63e1615](https://github.com/codeonym-oss/i18n-ai/commit/63e161584aba5c1ebc34402a6b013360098608e3))
+
 ## [0.2.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.1.0...v0.2.0) (2026-10-23)
 
 
