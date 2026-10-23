@@ -9,12 +9,18 @@ placeholder intact.
 
 ```sh
 i18n-ai          # in your project: pick the tree, the locales, the provider and the model
+i18n-ai scan -t fr,ar            # finds your i18n library, and where it keeps its locales
 i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clinic's booking site"
 ```
 
 - **Asks for what is missing.** Run `i18n-ai` alone: it finds the locale trees in the project,
   offers CLDR's locales to pick, lists the providers and each one's models from its API, and
   asks for a missing API key, hidden. It ends with the command that repeats the run, for CI.
+- **Knows your framework.** i18next, next-intl, FormatJS, vue-i18n, Nuxt, Angular, Transloco,
+  ngx-translate, svelte-i18n, Paraglide, Rails, Django and Flutter are detected from the
+  project's manifests and config (`package.json`, `Gemfile`, `pubspec.yaml`, `angular.json`,
+  `l10n.yaml`, …), with where their locales are and in which format; `--preset` names another,
+  and `i18n-ai presets` lists them.
 - **Any tree.** A directory per locale (`locales/en/**/*.json`), a file per locale
   (`messages/en.json`, Rails' `config/locales/en.yml`), or one bundle holding them all
   (`{"en": {...}, "fr": {...}}`). The targets are written beside the source, the way it is
@@ -56,7 +62,8 @@ i18n-ai auth logout openai       # or --all
 
 ```sh
 i18n-ai                                          # guided: asks for everything it needs
-i18n-ai scan locales/en -t fr,ar                 # the precheck alone
+i18n-ai scan -t fr,ar                            # the precheck alone, in the preset's tree
+i18n-ai scan locales/en -t fr,ar                 # or in the one named
 i18n-ai generate locales/en -t fr -t pt-BR -m anthropic:claude-sonnet-4-5
 i18n-ai generate messages/en.json -t ja -m ollama:qwen2.5:14b --dry-run
 i18n-ai generate locales -s en -t de --include "auth/*" --exclude "legacy/*" -y
@@ -71,6 +78,7 @@ i18n-ai providers list | models openai | install ollama | check openai:gpt-4.1-m
 | `-o, --output` | Where the targets go. Default: beside the source. |
 | `-c, --context` | What the website is, to set the tone and vocabulary. |
 | `--include`, `--exclude` | Globs over the source's file names. |
+| `--preset` | The project's i18n library, in place of the one detected (`i18n-ai presets`). |
 | `--overwrite` | Translate every message again, instead of keeping the good existing ones. |
 | `--strict` | Write no file that has a message which kept failing the rules. |
 | `--no-classify` | Skip the model's check that each file is a locale document. |

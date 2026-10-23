@@ -38,16 +38,18 @@ src/i18n_ai/
 │   ├── sub_domains/
 │   │   ├── locale/    LocaleCode, KeyPath, layouts · LocaleDocument, LocaleTree
 │   │   │              placeholders/ (tokens, ICU parser, signatures) · schema/ · rules/
+│   │   │              presets/ (the table of i18n libraries)
 │   │   └── provider/  ModelSpec, ResolvedModel
 │   └── exports/       each sub-domain's public names
 ├── application/
-│   ├── ports/         locale (scanner, store, engine) · provider (catalog, installer) · progress
-│   ├── intents/       locale: ScanLocaleTreeQuery, GenerateLocalesCommand
+│   ├── ports/         locale (scanner, store, engine, project inspector) · provider (catalog,
+│   │                  installer) · progress
+│   ├── intents/       locale: ScanLocaleTreeQuery, DetectPresetQuery, GenerateLocalesCommand
 │   │                  provider: ListProvidersQuery, GetProviderStatusQuery, InstallProviderCommand
 │   └── exports/
-├── infra/adapters/    filesystem (scanner, store, formats: JSON, YAML, ARB, PO, XLIFF) · langchain
-│                      (catalog, chat models) · langgraph (run graph, atom, gateway, prompts) ·
-│                      packages (uv / pip) · console (progress) · keyring
+├── infra/adapters/    filesystem (scanner, store, project inspector, formats: JSON, YAML, ARB,
+│                      PO, XLIFF) · langchain (catalog, chat models) · langgraph (run graph,
+│                      atom, gateway, prompts) · packages (uv / pip) · console (progress) · keyring
 ├── di/                platform providers · messaging (mediator, scanned) · container · bootstrap
 ├── runtime/           settings, from the environment and .env
 └── cli/               Typer: handlers, rendering, the runner

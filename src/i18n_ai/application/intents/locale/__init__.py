@@ -11,7 +11,14 @@ from .queries.detect_locale_trees import (
     DetectLocaleTreesQueryHandler,
     TreeCandidateView,
 )
+from .queries.detect_preset import (
+    DetectPresetQuery,
+    DetectPresetQueryHandler,
+    PresetMatch,
+    PresetView,
+)
 from .queries.list_locales import ListLocalesQuery, ListLocalesQueryHandler, LocaleView
+from .queries.list_presets import ListPresetsQuery, ListPresetsQueryHandler
 from .queries.scan_locale_tree import (
     ScanLocaleTreeQuery,
     ScanLocaleTreeQueryHandler,
@@ -24,6 +31,8 @@ from .queries.scan_locale_tree import (
 __all__ = [
     "DetectLocaleTreesQuery",
     "DetectLocaleTreesQueryHandler",
+    "DetectPresetQuery",
+    "DetectPresetQueryHandler",
     "FileResult",
     "GenerateLocalesCommand",
     "GenerateLocalesCommandHandler",
@@ -31,7 +40,11 @@ __all__ = [
     "GenerationReceipt",
     "ListLocalesQuery",
     "ListLocalesQueryHandler",
+    "ListPresetsQuery",
+    "ListPresetsQueryHandler",
     "LocaleView",
+    "PresetMatch",
+    "PresetView",
     "ResultStatus",
     "ScanLocaleTreeQuery",
     "ScanLocaleTreeQueryHandler",

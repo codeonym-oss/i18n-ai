@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "projects": {
+    "site": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "i18n": {
+        "sourceLocale": "en",
+        "locales": {
+          "fr": "src/locale/messages.fr.xlf"
+        }
+      },
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "localize": true,
+            "tsConfig": "tsconfig.app.json"
+          }
+        }
+      }
+    }
+  }
+}

@@ -10,7 +10,7 @@ from pathlib import Path
 from mediary import Mediator
 from rich.console import Console
 
-from ...application.exports.locale import DetectLocaleTreesQuery, ListLocalesQuery
+from ...application.exports.locale import DetectLocaleTreesQuery, ListLocalesQuery, PresetMatch
 from ...application.exports.provider import (
     ListModelsQuery,
     ListProvidersQuery,
@@ -48,10 +48,17 @@ class Wizard:
         self.asked = False  # whether anything was asked, for the equivalent command
         self._keys: set[str] = set()  # the variables whose key was asked
 
-    async def tree(self) -> Path:
+    async def tree(self, preset: PresetMatch | None = None) -> Path:
+        """The trees found in the project, the preset's first and the default, unless another
+        was picked last time."""
         candidates = await self._mediator.send(DetectLocaleTreesQuery(self._project))
         self.asked = True
-        if not candidates:
+        ours = preset.tree if preset is not None else None
+        if ours is not None:
+            candidates = tuple(
+                candidate for candidate in candidates if candidate.path.resolve() != ours.resolve()
+            )
+        if not candidates and ours is None:
             self._console.print(f"[dim]No locale tree found under {self._project}.[/]")
             return Path(
                 await self._ask.text("Path to the source locale tree", self._last.tree or "")
@@ -64,8 +71,12 @@ class Wizard:
             )
             for candidate in candidates
         ]
+        if preset is not None and ours is not None:
+            label = f"{self.shown(ours)}  [{preset.preset.name} preset]"
+            choices.insert(0, Choice(self.shown(ours), label))
         choices.append(Choice(_OTHER, "Another path…"))
-        picked = await self._ask.select("Which locale tree?", choices, self._last.tree)
+        default = self._last.tree or (self.shown(ours) if ours is not None else None)
+        picked = await self._ask.select("Which locale tree?", choices, default)
         if picked == _OTHER:
             return Path(
                 await self._ask.text("Path to the source locale tree", self._last.tree or "")

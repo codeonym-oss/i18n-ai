@@ -51,3 +51,14 @@ class MixedLocaleFormats(DomainException):
             error_code="MIXED_LOCALE_FORMATS",
             details={"path": path, "formats": formats},
         )
+
+
+class PresetUnknown(DomainException):
+    """No preset has the name asked."""
+
+    def __init__(self, name: str, known: list[str]) -> None:
+        super().__init__(
+            message=f"no preset is called {name}; the presets are {', '.join(known)}",
+            error_code="PRESET_UNKNOWN",
+            details={"name": name},
+        )

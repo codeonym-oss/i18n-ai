@@ -1,0 +1,8 @@
+{
+  "name": "angular-example",
+  "private": true,
+  "dependencies": {
+    "@angular/core": "^20.0.0",
+    "@angular/localize": "^20.0.0"
+  }
+}

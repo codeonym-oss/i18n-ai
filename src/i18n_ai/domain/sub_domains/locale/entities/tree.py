@@ -41,7 +41,7 @@ class LocaleTree:
 
     `root` holds the locale directories, the locale files, or is the bundle file itself; the
     targets are written under `output`, which is `root` unless asked otherwise. Every source
-    file is in one `format`."""
+    file is in one `format`; the source's files in the formats `left_alone` are not read."""
 
     root: Path
     layout: TreeLayout
@@ -51,6 +51,7 @@ class LocaleTree:
     output: Path
     format: LocaleFormat = LocaleFormat.JSON
     prefix: str = ""
+    left_alone: tuple[LocaleFormat, ...] = ()
 
     @property
     def source_path(self) -> Path:

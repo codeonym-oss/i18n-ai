@@ -8,6 +8,7 @@ from .engine import (
     ITranslationEngine,
     TranslationJob,
 )
+from .project import IProjectInspector
 from .scanner import ILocaleTreeScanner, TreeCandidate, TreeRequest
 from .store import ILocaleStore
 
@@ -20,6 +21,7 @@ __all__ = [
     "FileTranslated",
     "ILocaleStore",
     "ILocaleTreeScanner",
+    "IProjectInspector",
     "ITranslationEngine",
     "TranslationJob",
     "TreeCandidate",

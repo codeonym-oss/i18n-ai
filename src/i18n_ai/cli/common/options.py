@@ -1,9 +1,22 @@
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
 from ...application.ports.locale import TreeRequest
 from ...domain.exports.locale import InvalidLocaleCode, LocaleCode, LocaleFormat
+
+PresetOption = Annotated[
+    str | None,
+    typer.Option(
+        "--preset",
+        help=(
+            "The project's i18n library, for where its locales are and their format, in place "
+            "of the one detected; `i18n-ai presets` lists them."
+        ),
+        show_default=False,
+    ),
+]
 
 
 class MissingParameter(typer.BadParameter):
