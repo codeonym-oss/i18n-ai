@@ -32,13 +32,14 @@ class PluralForm:
 @dataclass(frozen=True)
 class SourceUnit:
     """One message to translate: its id in the schema, where its translation goes, the source
-    text, and the signature the translation must keep."""
+    text, and the signature the translation must keep; the source file's `note` on it, if any."""
 
     id: str
     path: KeyPath
     source: str
     signature: Signature
     plural: PluralForm | None = None
+    note: str | None = None
 
 
 @dataclass(frozen=True)
@@ -92,7 +93,7 @@ def extract_schema(
 ) -> LocaleSchema:
     """The schema of `document`'s translation from `source` into `target`."""
     texts = list(document.strings())
-    builder = _Builder(target, quotes=uses_icu_quotes(texts))
+    builder = _Builder(target, quotes=uses_icu_quotes(texts), notes=document.notes)
     template = builder.object(document.content, KeyPath())
     return LocaleSchema(
         source=source,
@@ -105,9 +106,10 @@ def extract_schema(
 
 
 class _Builder:
-    def __init__(self, target: LocaleCode, quotes: bool) -> None:
+    def __init__(self, target: LocaleCode, quotes: bool, notes: Mapping[KeyPath, str]) -> None:
         self.target = target
         self.quotes = quotes
+        self.notes = notes
         self.units: list[SourceUnit] = []
 
     def node(self, value: Any, path: KeyPath) -> Any:
@@ -120,7 +122,7 @@ class _Builder:
         if isinstance(value, list):
             return [self.node(item, path.child(index)) for index, item in enumerate(value)]
         if is_message(value):
-            return self.slot(path, value, None)
+            return self.slot(path, value, None, path)
         return value
 
     def object(self, node: dict[str, Any], path: KeyPath) -> dict[str, Any]:
@@ -160,16 +162,21 @@ class _Builder:
             text = forms[source_category]
             key = key_of(category)
             form = PluralForm(kind, category, source_category)
-            rendered[key] = self.slot(path.child(key), text, form) if is_message(text) else text
+            source = path.child(key_of(source_category))
+            rendered[key] = (
+                self.slot(path.child(key), text, form, source) if is_message(text) else text
+            )
         return rendered
 
-    def slot(self, path: KeyPath, text: str, plural: PluralForm | None) -> Slot:
+    def slot(self, path: KeyPath, text: str, plural: PluralForm | None, source: KeyPath) -> Slot:
+        """A unit for `text`, which is at `source` in the source document."""
         unit = SourceUnit(
             id=str(len(self.units) + 1),
             path=path,
             source=text,
             signature=signature_of(text, quotes=self.quotes),
             plural=plural,
+            note=self.notes.get(source),
         )
         self.units.append(unit)
         return Slot(unit.id)

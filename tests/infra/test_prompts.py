@@ -1,6 +1,6 @@
 import json
 
-from i18n_ai.domain.exports.locale import LocaleCode, LocaleDocument, extract_schema
+from i18n_ai.domain.exports.locale import KeyPath, LocaleCode, LocaleDocument, extract_schema
 from i18n_ai.infra.adapters.langgraph.prompts import (
     classify_human,
     classify_system,
@@ -37,7 +37,7 @@ def test_a_plural_family_is_explained() -> None:
     prompt = translate_system(schema, "common.json", None, None)
 
     assert "`{{name}}` interpolations" in prompt
-    assert "show the count with {{count}}" in prompt
+    assert "show the count with the source's count placeholder" in prompt
     assert "ICU MessageFormat" not in prompt
     assert "right to left" not in prompt
 
@@ -55,6 +55,24 @@ def test_a_retry_carries_the_previous_answer_and_its_problems() -> None:
     assert first["problems_to_fix"] == ["missing {{count}}"]
     assert first["placeholders"] == ["{{count}}"]
     assert "plural" in first
+
+
+def test_a_note_is_sent_with_its_message() -> None:
+    document = LocaleDocument(
+        {"save": "Save", "open": "Open"},
+        notes={KeyPath(("save",)): "Button that saves the profile"},
+    )
+    schema = extract_schema(document, LocaleCode("en"), LocaleCode("fr"))
+
+    system = translate_system(schema, "app_en.arb", None, None)
+    sent = json.loads(translate_human(schema.units, {}, {}).split("```json\n")[1].split("\n```")[0])
+
+    assert "`note`" in system
+    assert sent[0]["note"] == "Button that saves the profile"
+    assert "note" not in sent[1]
+    assert "`note`" not in translate_system(
+        extract_schema(I18NEXT, LocaleCode("en"), LocaleCode("fr")), "a.json", None, None
+    )
 
 
 def test_the_classifier_sees_the_file() -> None:

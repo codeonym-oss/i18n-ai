@@ -34,7 +34,7 @@ def load_document(path: Path, adapter: FileFormat) -> tuple[LocaleDocument | Non
     if not isinstance(content, dict):
         kind = "nothing" if content is None else f"a {type(content).__name__}"
         return None, f"its top level is {kind}, not an object"
-    return LocaleDocument(content), None
+    return LocaleDocument(content, adapter.notes(path)), None
 
 
 __all__ = ["FORMATS", "FileFormat", "extensions", "format_of", "load_document"]

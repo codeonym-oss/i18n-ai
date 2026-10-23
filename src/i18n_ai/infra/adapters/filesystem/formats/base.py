@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from .....domain.exports.locale import LocaleFormat, SourceFile
+from .....domain.exports.locale import KeyPath, LocaleFormat, SourceFile
 
 
 class FileFormat(ABC):
@@ -18,6 +18,10 @@ class FileFormat(ABC):
         """The content of `path`, as plain dicts, lists, strings and numbers, its keys strings.
         Raises `OSError`, or `ValueError` when it is not valid."""
         raise NotImplementedError
+
+    def notes(self, path: Path) -> dict[KeyPath, str]:
+        """What `path` says about its messages for their translators, by their path."""
+        return {}
 
     @abstractmethod
     def write(

@@ -88,7 +88,13 @@ def translate_system(
             "A message marked with a `plural` category is that form of a plural, and "
             f"{target.display_name} uses the categories {cardinal} (ordinals: {ordinal}). Write "
             f"the form that category needs in {target.display_name}; show the count with "
-            "{{count}} wherever that form needs it."
+            "the source's count placeholder (`{{count}}`, `%{count}`) wherever that form needs it."
+        )
+    if any(unit.note for unit in schema.units):
+        rules.append(
+            "A message's `note` is its author's description of it, for translators: use it to "
+            "choose the meaning and the tone (a button, a title, a verb or a noun). Never "
+            "translate the note itself."
         )
     rules.append(
         "Leave brand and product names, code, URLs, e-mail addresses and keyboard keys as they are."
@@ -108,6 +114,8 @@ def translate_human(
     messages: list[dict[str, Any]] = []
     for unit in units:
         message: dict[str, Any] = {"id": unit.id, "key": str(unit.path), "text": unit.source}
+        if unit.note:
+            message["note"] = unit.note
         if unit.plural is not None:
             message["plural"] = unit.plural.category
             if unit.plural.kind == ORDINAL:

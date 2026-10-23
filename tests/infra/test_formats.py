@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from i18n_ai.domain.exports.locale import SourceFile
+from i18n_ai.domain.exports.locale import KeyPath, SourceFile
 from i18n_ai.infra.adapters.filesystem.formats import FORMATS, format_of, load_document
 from i18n_ai.infra.adapters.filesystem.formats.arb_format import ArbFormat
 from i18n_ai.infra.adapters.filesystem.formats.yaml_format import YamlFormat
@@ -190,6 +190,15 @@ def test_arb_is_read_without_its_metadata(tmp_path: Path) -> None:
     content = arb.read(source(tmp_path, ARB, "app_en.arb").path)
 
     assert content == {"title": "Notes", "count": "{n, plural, one{# note} other{# notes}}"}
+
+
+def test_an_arb_description_is_its_messages_note(tmp_path: Path) -> None:
+    path = source(tmp_path, ARB, "app_en.arb").path
+
+    document, _ = load_document(path, arb)
+
+    assert document is not None
+    assert document.notes == {KeyPath(("title",)): "The app's name"}
 
 
 def test_an_arb_target_names_its_locale_and_keeps_its_own_metadata(tmp_path: Path) -> None:

@@ -69,7 +69,9 @@ en:
 Its targets are rooted at their own locale (`fr:` in `fr.yml`).
 
 An ARB file's messages are ICU MessageFormat, checked as such. Its `@@` entries describe the file
-and its `@key` entries describe a message for `gen-l10n`; neither is translated. A target gets the
+and its `@key` entries describe a message for `gen-l10n`; neither is translated. A message's
+`description` is given to the model beside it, so that a short label (`Save`, `Post`) is
+translated in the sense its author meant. A target gets the
 source's `@@` entries, with `@@locale` set to its own locale, and no `@key` entry from the
 source, since `gen-l10n` reads them from the template only. The ones a target already has are
 kept. A new ARB locale is spelled with underscores, as Flutter's file names are: `app_pt_BR.arb`.

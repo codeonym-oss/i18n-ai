@@ -1,6 +1,7 @@
 """Flutter's Application Resource Bundle: JSON whose messages are ICU MessageFormat, beside
 entries that are not messages. `@@locale` and the other `@@` globals describe the file; `@key`
 describes `key` for its translators and for `gen-l10n` (its description, its placeholders' types).
+A message's description is its note, which the model is given beside it.
 
 A target has the source's globals, `@@locale` its own locale, and its messages in the source's
 order. The `@key` entries are read from the template file only, so a target keeps the ones it
@@ -9,7 +10,7 @@ has and gets none from the source."""
 from pathlib import Path
 from typing import Any
 
-from .....domain.exports.locale import LocaleFormat, SourceFile
+from .....domain.exports.locale import KeyPath, LocaleFormat, SourceFile
 from ..files import write_atomically
 from .base import FileFormat
 from .json_format import JsonStyle, dump, read_json
@@ -25,6 +26,16 @@ class ArbFormat(FileFormat):
         if not isinstance(content, dict):
             return content
         return {key: value for key, value in content.items() if not key.startswith("@")}
+
+    def notes(self, path: Path) -> dict[KeyPath, str]:
+        content, _ = _read(path)
+        notes = {}
+        for key in content:
+            metadata = content.get(f"@{key}")
+            description = metadata.get("description") if isinstance(metadata, dict) else None
+            if not key.startswith("@") and isinstance(description, str) and description.strip():
+                notes[KeyPath((key,))] = description.strip()
+        return notes
 
     def write(
         self,

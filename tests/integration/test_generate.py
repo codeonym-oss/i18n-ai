@@ -246,13 +246,13 @@ async def test_a_vue_i18n_tree_in_yaml(mediator: Mediator, examples: Path) -> No
     assert "  links:\n  - '[ja] About us'\n" in japanese
 
 
-async def test_a_flutter_tree_in_arb(mediator: Mediator, examples: Path) -> None:
+async def test_a_flutter_tree_in_arb(
+    mediator: Mediator, examples: Path, gateway: FakeGateway
+) -> None:
     l10n = examples / "flutter" / "lib" / "l10n"
 
     receipt = await mediator.send(
-        GenerateLocalesCommand(
-            TreeRequest(examples / "flutter" / "lib" / "l10n"), codes("ar", "pt-BR"), MODEL
-        )
+        GenerateLocalesCommand(TreeRequest(l10n), codes("ar", "pt-BR"), MODEL)
     )
 
     assert receipt.ok
@@ -261,3 +261,6 @@ async def test_a_flutter_tree_in_arb(mediator: Mediator, examples: Path) -> None
     assert arabic["@@locale"] == "ar"
     assert arabic["greeting"] == "[ar] Hello {name}!"
     assert read(l10n / "app_pt_BR.arb")["@@locale"] == "pt_BR"
+    notes = {str(unit.path): unit.note for batch in gateway.batches for unit in batch.units}
+    assert notes["greeting"] == "Shown on the home screen"
+    assert notes["noteCount"] is None

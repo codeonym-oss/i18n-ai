@@ -1,6 +1,7 @@
 import pytest
 
 from i18n_ai.domain.exports.locale import (
+    KeyPath,
     LocaleCode,
     LocaleDocument,
     MissingTranslations,
@@ -92,6 +93,24 @@ def test_a_nested_family_keeps_its_zero() -> None:
 def test_an_object_that_is_not_only_plural_forms_is_kept(node: dict[str, object]) -> None:
     schema = extract_schema(LocaleDocument({"n": node}), LocaleCode("en"), LocaleCode("ar"))
     assert list(schema.template["n"]) == list(node)
+
+
+def test_a_note_goes_with_its_message_and_its_plural_forms() -> None:
+    document = LocaleDocument(
+        {"save": "Save", "item_one": "1 item", "item_other": "{{count}} items"},
+        notes={KeyPath(("save",)): "A button", KeyPath(("item_other",)): "In the cart"},
+    )
+
+    schema = extract_schema(document, LocaleCode("en"), LocaleCode("ru"))
+
+    notes = {str(unit.path): unit.note for unit in schema.units}
+    assert notes == {
+        "save": "A button",
+        "item_one": None,
+        "item_few": "In the cart",
+        "item_many": "In the cart",
+        "item_other": "In the cart",
+    }
 
 
 def test_render_keeps_order_and_non_text() -> None:
