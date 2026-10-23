@@ -79,7 +79,9 @@ async def test_detect_finds_every_tree_in_a_project(examples: Path) -> None:
         ("gnu/po", "file", "po"),
         ("i18next/locales", "directory", "json"),
         ("icu/messages", "file", "json"),
+        ("symfony/translations", "file", "xliff"),
         ("vue-i18n/locales", "file", "yaml"),
+        ("angular/src/locale", "file", "xliff"),
         ("flutter/lib/l10n", "file", "arb"),
         ("rails/config/locales", "file", "yaml"),
     ]
@@ -171,7 +173,9 @@ async def test_a_file_in_another_format_is_not_a_tree(tmp_path: Path) -> None:
     (tmp_path / "en.json").write_text('{"a": "A"}')
     scanner = FileSystemLocaleTreeScanner()
 
-    with pytest.raises(LocaleTreeNotFound, match=r"\(\.json, \.yml, \.yaml, \.arb, \.po, \.pot\)"):
+    with pytest.raises(
+        LocaleTreeNotFound, match=r"\(\.json, \.yml, \.yaml, \.arb, \.po, \.pot, \.xlf, \.xliff\)"
+    ):
         await scanner.scan(TreeRequest(tmp_path / "en.properties"))
     with pytest.raises(LocaleTreeNotFound, match=r"\(\.yml, \.yaml\)"):
         await scanner.scan(TreeRequest(tmp_path / "en.json", format=LocaleFormat.YAML))
@@ -282,3 +286,24 @@ async def test_a_babel_template_beside_its_locale_directories(tmp_path: Path) ->
     assert tree.target_location(LocaleCode("de"), file).path == (
         tmp_path / "de/LC_MESSAGES/messages.po"
     )
+
+
+async def test_an_xliff_template_names_its_translations_as_angular_does(tmp_path: Path) -> None:
+    template = tmp_path / "messages.xlf"
+    template.write_text(
+        '<xliff version="1.2"><file><body><trans-unit id="a"><source>A</source></trans-unit>'
+        "</body></file></xliff>"
+    )
+
+    tree = await FileSystemLocaleTreeScanner().scan(TreeRequest(tmp_path))
+
+    assert (tree.layout, tree.format, tree.prefix) == (
+        TreeLayout.FILE,
+        LocaleFormat.XLIFF,
+        "messages.",
+    )
+    assert tree.files[0].path == template
+    assert tree.target_location(LocaleCode("pt-BR"), tree.files[0]).path == (
+        tmp_path / "messages.pt-BR.xlf"
+    )
+    assert await FileSystemLocaleTreeScanner().scan(TreeRequest(template)) == tree

@@ -7,10 +7,12 @@ from .arb_format import ArbFormat
 from .base import FileFormat
 from .json_format import JsonFormat
 from .po_format import PoFormat
+from .xliff_format import XliffFormat
 from .yaml_format import YamlFormat
 
 FORMATS: dict[LocaleFormat, FileFormat] = {
-    adapter.format: adapter for adapter in (JsonFormat(), YamlFormat(), ArbFormat(), PoFormat())
+    adapter.format: adapter
+    for adapter in (JsonFormat(), YamlFormat(), ArbFormat(), PoFormat(), XliffFormat())
 }
 
 

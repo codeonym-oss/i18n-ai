@@ -32,7 +32,8 @@ messages/
 ```
 
 Point at `messages/en.json`, or at `messages`. The names may share a prefix, as Flutter's do:
-`lib/l10n/app_en.arb` gives `app_fr.arb`.
+`lib/l10n/app_en.arb` gives `app_fr.arb`, and Symfony's: `translations/messages.en.xlf` gives
+`messages.fr.xlf`.
 
 ## A bundle
 
@@ -54,6 +55,7 @@ their order and the file's style are kept.
 | YAML | `.yml`, `.yaml` | Rails, vue-i18n, Symfony, Hugo |
 | ARB | `.arb` | Flutter (`gen-l10n`, `intl`) |
 | gettext PO | `.po`, `.pot` | Django, WordPress, Babel, GNU projects |
+| XLIFF 1.2, 2.0 | `.xlf`, `.xliff` | Angular, Symfony, translation tools |
 
 The format is told by the extension. A tree keeps to one: when the source mixes them
 (`en/app.json` beside `en/mail.yml`), `scan` and `generate` refuse it, and `--format` names the
@@ -103,6 +105,29 @@ forms. A new catalog gets CLDR's rule, written as gettext's `Plural-Forms`.
 
 The extracted comments (`#.`) and the context (`msgctxt`) are given to the model as the
 message's note.
+
+### XLIFF
+
+An XLIFF file holds each message's source text and its translation: a unit's `<source>` and
+`<target>` in XLIFF 1.2 (`<trans-unit>`), each of its segments' in XLIFF 2.0 (`<unit>`,
+`<segment>`). A message is keyed by its unit's `id`. A file with no locale in its name is a
+template, as Angular's `ng extract-i18n` writes it: point at `src/locale/messages.xlf`, or at its
+directory, and its targets are `messages.fr.xlf`. In a source locale's own file, as Symfony
+writes `translations/messages.en.xlf`, a message's text is its `<target>`.
+
+The elements inside a message, a placeholder (`<x id="INTERPOLATION"/>`, `<ph/>`) or a run of
+bold (`<g>`, `<pc>`), are given to the model as numbered tags, `<x1/>` and `<g2>…</g2>`, which
+its translation must keep, as it must any tag. A translation may move them; each is written
+back as its source has it, attributes and all. Its `<note>`s, what each tag stands for (its
+`equiv-text` or `disp`), and its Symfony key (`resname`) are the message's note.
+
+A target is the template with its `<target>`s filled, its `target-language` (`trgLang` in 2.0)
+its locale. Each translation is marked as a machine's, for translation tools to put it up for
+review: `state="needs-review-translation" state-qualifier="mt-suggestion"` in XLIFF 1.2, and
+`state="translated" subState="i18n-ai:mt"` in 2.0, whose states have no such one. Angular and
+Symfony read a target whatever its state, and i18n-ai keeps it on the next run. An existing one keeps its own translations,
+units and notes, and gets the template's new units and current `<source>`s; a target still
+`new`, `needs-translation` or `initial` is translated again.
 
 ## The source locale
 
