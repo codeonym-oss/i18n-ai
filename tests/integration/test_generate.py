@@ -15,7 +15,7 @@ from i18n_ai.application.exports.locale import (
 from i18n_ai.application.ports.locale import TreeRequest
 from i18n_ai.di.container import build_container
 from i18n_ai.di.messaging import build_mediator
-from i18n_ai.domain.exports.locale import KeyPath, LocaleCode, TargetIsSource
+from i18n_ai.domain.exports.locale import KeyPath, LocaleCode, MessageSyntax, TargetIsSource
 from i18n_ai.domain.exports.provider import ModelSpec
 from support.fakes import FakeGateway, FakeModel
 
@@ -356,3 +356,25 @@ async def test_a_symfony_locale_holds_its_text_in_its_targets(
     assert ("<source>cart.empty</source>\n        " + REVIEW + "[de] Your cart is empty.") in german
     notes = {str(unit.path): unit.note for batch in gateway.batches for unit in batch.units}
     assert notes["Bt8LvVd"] == "key: cart.empty"
+
+
+def laravel(path: Path) -> TreeRequest:
+    return TreeRequest(path, syntax=MessageSyntax.LARAVEL)
+
+
+async def test_a_laravel_tree_is_generated_from_its_keys(examples: Path) -> None:
+    gateway = FakeGateway(broken_first={'["Welcome, :name!"]'})
+    container = build_container(build_mediator(), Console(quiet=True), FakeModel(gateway))
+    async with container() as request:
+        mediator = await request.get(Mediator)
+        lang = examples / "laravel" / "lang"
+        receipt = await mediator.send(GenerateLocalesCommand(laravel(lang), codes("de"), MODEL))
+    await container.close()
+
+    (result,) = receipt.results
+    assert result.status == ResultStatus.WRITTEN, result
+    german = read(lang / "de.json")
+    assert list(german) == list(read(lang / "fr.json"))
+    assert german["Welcome, :name!"] == "[de] Welcome, :name!"
+    retried = [batch for batch in gateway.batches if batch.problems]
+    assert "missing :name" in next(iter(retried[0].problems.values()))[0]

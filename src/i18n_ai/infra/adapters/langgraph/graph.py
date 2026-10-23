@@ -72,6 +72,7 @@ def build_run_graph(gateway: ILlmGateway) -> CompiledStateGraph[Any, Any, Any, A
             state = await atom.ainvoke(
                 {
                     "source": task["request"].source,
+                    "syntax": task["request"].syntax,
                     "job": job,
                     "settings": settings,
                     "subject": task["subject"],

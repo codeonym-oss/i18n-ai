@@ -46,7 +46,7 @@ class ScanLocaleTreeQueryHandler(QueryHandler[ScanLocaleTreeQuery, ScanReport]):
                 assert file.document is not None
                 location = tree.target_location(target, file)
                 existing = await self._store.read(location)
-                schema = extract_schema(file.document, tree.source, target)
+                schema = extract_schema(file.document, tree.source, target, tree.syntax)
                 reusable = len(reusable_translations(schema, existing))
                 target_files.append(
                     TargetFileView(

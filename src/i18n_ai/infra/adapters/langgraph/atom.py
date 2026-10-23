@@ -21,6 +21,7 @@ from ....application.ports.locale import EngineSettings, FileTranslated, Transla
 from ....domain.exports.locale import (
     LocaleCode,
     LocaleSchema,
+    MessageSyntax,
     Severity,
     Violation,
     check,
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 class AtomState(TypedDict, total=False):
     # In
     source: LocaleCode
+    syntax: MessageSyntax
     job: TranslationJob
     settings: EngineSettings
     subject: str | None
@@ -58,7 +60,7 @@ class AtomState(TypedDict, total=False):
 def build_atom_graph(gateway: ILlmGateway) -> CompiledStateGraph[Any, Any, Any, Any]:
     def extract(state: AtomState) -> AtomState:
         job = state["job"]
-        schema = extract_schema(job.document, state["source"], job.target)
+        schema = extract_schema(job.document, state["source"], job.target, state["syntax"])
         reused = reusable_translations(schema, job.existing)
         pending = [unit.id for unit in schema.units if unit.id not in reused]
         return {

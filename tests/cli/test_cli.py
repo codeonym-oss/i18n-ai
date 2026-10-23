@@ -334,6 +334,28 @@ def test_a_laravel_project_is_scanned_from_its_keys(
     assert "(the keys of fr.json)" in output
 
 
+def test_laravel_s_syntax_stays_in_its_own_locales(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = examples / "laravel"
+    (project / "lang/de.json").write_text('{"Welcome, :name!": "Willkommen!"}')
+    (project / "resources/js/locales").mkdir(parents=True)
+    (project / "resources/js/locales/en.json").write_text('{"m": "Ratio :name"}')
+    (project / "resources/js/locales/de.json").write_text('{"m": "Verhältnis"}')
+    monkeypatch.chdir(project)
+
+    code, output = invoke("scan", "lang", "-t", "de")
+
+    assert code == 0, output
+    assert "fill (0 kept)" in output  # its lost :name is translated again
+
+    code, output = invoke("scan", "resources/js/locales", "-t", "de")
+
+    assert code == 0, output
+    assert "Preset laravel" in output
+    assert "fill (1 kept)" in output  # `:name` is text in a vue-i18n tree
+
+
 def test_scan_with_no_path_and_no_preset_takes_the_only_tree(
     examples: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

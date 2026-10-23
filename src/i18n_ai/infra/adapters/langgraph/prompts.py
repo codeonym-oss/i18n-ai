@@ -25,6 +25,7 @@ _STYLES = {
     PlaceholderStyle.TAGS: (
         "HTML and component tags such as `<b>`, `</b>`, `<0>`, `<br/>`, with their attributes"
     ),
+    PlaceholderStyle.LARAVEL: "`:name` placeholders",
 }
 
 
@@ -70,6 +71,12 @@ def translate_system(
     styles = [_STYLES[style] for style in sorted(schema.styles) if style in _STYLES]
     if styles:
         rules.append("This file uses " + "; ".join(styles) + ".")
+    if PlaceholderStyle.LARAVEL in schema.styles:
+        rules.append(
+            "A `:name` renders its value as given, `:Name` capitalized, `:NAME` in capitals: keep "
+            "the name, and change its case only where the grammar needs it (at the start of a "
+            "sentence)."
+        )
     if PlaceholderStyle.TAGS in schema.styles:
         rules.append("Keep every tag and its attributes; translate only the text between tags.")
     if PlaceholderStyle.ICU in schema.styles:

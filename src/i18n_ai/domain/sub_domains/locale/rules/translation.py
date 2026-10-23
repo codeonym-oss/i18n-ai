@@ -67,7 +67,7 @@ def check(schema: LocaleSchema, unit: SourceUnit, text: str | None) -> list[Viol
         return [violation(ViolationCode.EMPTY, "the translation is empty")]
 
     source = unit.signature
-    translated = signature_of(text, quotes=schema.quotes)
+    translated = signature_of(text, quotes=schema.quotes, syntax=schema.syntax)
     if source.error is None and translated.error is not None:
         return [
             violation(ViolationCode.ICU_SYNTAX, f"the ICU braces are broken: {translated.error}")

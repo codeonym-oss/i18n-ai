@@ -1,6 +1,12 @@
 import json
 
-from i18n_ai.domain.exports.locale import KeyPath, LocaleCode, LocaleDocument, extract_schema
+from i18n_ai.domain.exports.locale import (
+    KeyPath,
+    LocaleCode,
+    LocaleDocument,
+    MessageSyntax,
+    extract_schema,
+)
 from i18n_ai.infra.adapters.langgraph.prompts import (
     classify_human,
     classify_system,
@@ -78,3 +84,16 @@ def test_a_note_is_sent_with_its_message() -> None:
 def test_the_classifier_sees_the_file() -> None:
     assert "English" in classify_system(LocaleCode("en"))
     assert "`meta.json`" in classify_human("meta.json", '{"version": 2}')
+
+
+def test_laravel_s_placeholders_are_explained_in_its_syntax_only() -> None:
+    document = LocaleDocument({"Welcome, :name!": "Welcome, :name!"})
+    en, de = LocaleCode("en"), LocaleCode("de")
+
+    prompt = translate_system(
+        extract_schema(document, en, de, MessageSyntax.LARAVEL), "", None, None
+    )
+
+    assert "`:name` placeholders" in prompt
+    assert "`:Name` capitalized" in prompt
+    assert ":Name" not in translate_system(extract_schema(document, en, de), "", None, None)

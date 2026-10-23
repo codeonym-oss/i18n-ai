@@ -53,7 +53,7 @@ class FakeGateway:
         for unit in batch.units:
             text = f"[{target}] {unit.source}"
             if str(unit.path) in self.broken_first and unit.id not in batch.problems:
-                text = re.sub(r"\{\{[^}]*\}\}", "", text)
+                text = re.sub(r"\{\{[^}]*\}\}|(?<![A-Za-z0-9_]):[A-Za-z_][A-Za-z0-9_]*", "", text)
             out[unit.id] = text
         return out
 
