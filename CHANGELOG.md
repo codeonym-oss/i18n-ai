@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.1.0...v0.2.0) (2026-10-23)
+
+
+### Features
+
+* ask for whatever a run is missing, at a terminal ([#13](https://github.com/codeonym-oss/i18n-ai/issues/13)) ([#18](https://github.com/codeonym-oss/i18n-ai/issues/18)) ([b521c51](https://github.com/codeonym-oss/i18n-ai/commit/b521c51fa5680e4474594266e26999e667fcba67))
+* detect the project's i18n library and preset its tree ([#17](https://github.com/codeonym-oss/i18n-ai/issues/17)) ([#24](https://github.com/codeonym-oss/i18n-ai/issues/24)) ([2a5774f](https://github.com/codeonym-oss/i18n-ai/commit/2a5774ff475ab577268372ac3b97644d85e426b7))
+* keep provider API keys in the system keyring ([#14](https://github.com/codeonym-oss/i18n-ai/issues/14)) ([#19](https://github.com/codeonym-oss/i18n-ai/issues/19)) ([acea45f](https://github.com/codeonym-oss/i18n-ai/commit/acea45f6dda96297b8fb8c9d18c073668c5e9c99))
+* read and write Flutter's ARB locales ([#16](https://github.com/codeonym-oss/i18n-ai/issues/16)) ([#21](https://github.com/codeonym-oss/i18n-ai/issues/21)) ([233a65d](https://github.com/codeonym-oss/i18n-ai/commit/233a65d0a0b788a325be2ec1a1717b2ba2de9c44))
+* read and write gettext PO catalogs ([#16](https://github.com/codeonym-oss/i18n-ai/issues/16)) ([#22](https://github.com/codeonym-oss/i18n-ai/issues/22)) ([efd03dd](https://github.com/codeonym-oss/i18n-ai/commit/efd03dd415f2a909d524b0639fa1c9f0a420b41f))
+* read and write XLIFF 1.2 and 2.0 files ([#16](https://github.com/codeonym-oss/i18n-ai/issues/16)) ([#23](https://github.com/codeonym-oss/i18n-ai/issues/23)) ([3c68407](https://github.com/codeonym-oss/i18n-ai/commit/3c68407b824913ddf688aa981d9f30da386bb328))
+* read and write YAML locales ([#16](https://github.com/codeonym-oss/i18n-ai/issues/16)) ([#20](https://github.com/codeonym-oss/i18n-ai/issues/20)) ([9ffa586](https://github.com/codeonym-oss/i18n-ai/commit/9ffa586f89dc420d150730f4e31ca38487147908))
+
+
+### Build
+
+* **deps-dev:** update uv-build requirement from &lt;0.13,&gt;=0.8.22 to &gt;=0.8.22,&lt;0.14 in the dev-tools group ([#3](https://github.com/codeonym-oss/i18n-ai/issues/3)) ([fd8c906](https://github.com/codeonym-oss/i18n-ai/commit/fd8c9068a2f941111da8751466f8ae9628b220c6))
+
 ## 0.1.0 (2026-10-22)
 
 
