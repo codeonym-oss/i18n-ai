@@ -23,7 +23,8 @@ In your project, run `i18n-ai` alone, and answer its questions:
 ? Which openai model?         » gpt-4.1-mini  · recommended
 ```
 
-It finds the locale trees in the project, offers every CLDR locale (the ones already in the tree
+It finds the locale trees in the project, the one your i18n library keeps first (see
+[Your framework](frameworks.md)), offers every CLDR locale (the ones already in the tree
 picked), lists the providers with the ones ready to use first, and reads the chosen provider's
 model list from its API, the recommended models first. A missing API key is asked for, hidden,
 and used for that run; it is saved in the system keyring only if you say so (the default is

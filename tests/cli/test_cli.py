@@ -237,3 +237,97 @@ def test_an_unknown_provider_is_refused() -> None:
 
     assert code == 2
     assert "nobody" in output
+
+
+def flat(output: str) -> str:
+    """The output on one line, as the temporary directory's long paths may wrap it."""
+    return " ".join(output.split())
+
+
+def test_scan_with_no_path_uses_the_projects_preset(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(examples / "flutter")
+
+    code, output = invoke("scan", "-t", "fr")
+
+    assert code == 0, output
+    assert "Preset flutter · flutter_localizations in pubspec.yaml → lib/l10n" in output
+    assert "(from l10n.yaml)" in output
+    assert "Format    arb" in output
+    assert "app_fr.arb" in output
+
+
+def test_a_named_preset_overrides_the_detected_one(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (examples / "i18next/locales/en/extra.yml").write_text("a: A\n")
+    monkeypatch.chdir(examples / "i18next")
+
+    code, output = invoke("scan", "locales/en", "--preset", "rails")
+
+    assert code == 0, output
+    assert "Preset rails · --preset" in output
+    assert "Format    yaml" in output  # the preset's
+    assert "extra.yml" in output
+
+    code, output = invoke("scan", "--preset", "nope")
+
+    assert code == 2
+    assert "no preset is called nope" in flat(output)
+
+
+def test_scan_with_no_path_and_no_preset_takes_the_only_tree(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(examples / "symfony")
+
+    code, output = invoke("scan")
+
+    assert code == 0, output
+    assert "Preset" not in output
+    assert "Locale tree: translations" in output
+
+    monkeypatch.chdir(examples)
+    code, output = invoke("scan")
+
+    assert code == 2
+    assert "it has no preset's locales and no single locale tree" in flat(output)
+
+
+def test_presets_lists_them_and_the_one_used_here(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(examples / "rails")
+
+    code, output = invoke("presets")
+
+    assert code == 0
+    assert "rails ●" in output
+    assert "config/locales/<lng>.yml" in output
+    assert "Here: Preset rails · rails in Gemfile → config/locales" in output
+
+    monkeypatch.chdir(examples / "bundle")
+    code, output = invoke("presets")
+
+    assert code == 0
+    assert "●" not in output
+    assert "No i18n library is detected here." in output
+
+
+def test_generate_with_no_path_uses_the_projects_preset(
+    examples: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (examples / "icu/messages/notes.yml").write_text("a: A\n")  # not next-intl's format
+    monkeypatch.chdir(examples / "icu")
+
+    code, output = invoke("generate", "-t", "de", "--dry-run", "--no-input")
+
+    assert code == 0, output
+    assert "Preset next-intl · next-intl in package.json → messages" in output
+    assert "de.json" in output
+
+    code, output = invoke("generate", "--dry-run", "--no-input")
+
+    assert code == 2
+    assert "Missing option '--target'" in output

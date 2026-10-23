@@ -8,10 +8,11 @@ i18n-ai [-v | -vv] [--version] [COMMAND]
 terminal, is a guided `generate`: every option it needs is asked for. Elsewhere it shows this
 help.
 
-## `i18n-ai scan PATH`
+## `i18n-ai scan [PATH]`
 
 The precheck alone: the tree, its source files and whether each qualifies, and what each target
-needs. Nothing is sent to a model.
+needs. Nothing is sent to a model. With no `PATH`, the tree is where the project's
+[preset](../guide/frameworks.md) finds its locales, else the project's only locale tree.
 
 | Option | |
 |---|---|
@@ -20,11 +21,13 @@ needs. Nothing is sent to a model.
 | `-o, --output` | Where the targets go. Default: beside the source. |
 | `--include`, `--exclude` | Globs over the source's file names; repeat them. |
 | `-f, --format` | `json`, `yaml`, `arb`, `po` or `xliff`: read only that format's files, when the tree mixes several. |
+| `--preset` | The project's i18n library, in place of the one detected: where its locales are, and their format. |
 
 ## `i18n-ai generate [PATH]`
 
-The precheck, then the generation. At a terminal, a missing `PATH`, target, source (when the tree
-cannot tell it), model or API key is asked for; see [Getting started](../guide/getting-started.md).
+The precheck, then the generation. With no `PATH`, the tree is found as `scan` finds it. At a
+terminal, the tree (the preset's first), a missing target, source (when the tree cannot tell
+it), model or API key is asked for; see [Getting started](../guide/getting-started.md).
 
 | Option | |
 |---|---|
@@ -35,6 +38,7 @@ cannot tell it), model or API key is asked for; see [Getting started](../guide/g
 | `-c, --context` | What the website is, to set the tone and vocabulary. |
 | `--include`, `--exclude` | Globs over the source's file names; repeat them. |
 | `-f, --format` | `json`, `yaml`, `arb`, `po` or `xliff`: read only that format's files, when the tree mixes several. |
+| `--preset` | The project's i18n library, in place of the one detected. |
 | `--overwrite` | Translate every message again, instead of keeping the good existing ones. |
 | `--strict` | Write no file that has a message which kept failing the rules. |
 | `--no-classify` | Skip the model's check that each file is a locale document. |
@@ -44,7 +48,13 @@ cannot tell it), model or API key is asked for; see [Getting started](../guide/g
 | `--temperature` | The model's temperature; the provider's default if unset. |
 | `-y, --yes` | Skip the confirmations, installing the provider's package if needed. |
 | `--dry-run` | Stop after the precheck. |
-| `--no-input` | Ask nothing: a missing path or target is an error. Implied on CI and when piped. |
+| `--no-input` | Ask nothing: a missing target, or a tree no preset finds, is an error. Implied on CI and when piped. |
+
+## `i18n-ai presets`
+
+Every preset: its library, the packages and files it is detected from, where it keeps its
+locales, their format and placeholders. The one the working directory uses is marked, and said
+with where its locales are. See [Your framework](../guide/frameworks.md).
 
 ## `i18n-ai providers`
 
@@ -72,7 +82,7 @@ At a terminal, a missing provider is asked for. A key is looked up in the enviro
 |---|---|
 | 0 | Done. |
 | 1 | Something was not written: a file failed or was refused (`--strict`), nothing qualified, or you declined. |
-| 2 | A refusal, with one `error:` line: no tree, an unknown source or provider, a target that is the source, invalid settings. |
+| 2 | A refusal, with one `error:` line: no tree, an unknown source, preset or provider, a target that is the source, invalid settings. |
 | 130 | Interrupted. |
 
 ## Environment

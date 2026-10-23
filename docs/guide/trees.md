@@ -1,7 +1,8 @@
 # Locale trees
 
 i18n-ai reads three layouts, in any of its [formats](#formats), and writes each target in the
-same layout and format as its source.
+same layout and format as its source. In a project whose i18n library it knows, the tree is
+found without a path: see [Your framework](frameworks.md).
 
 ## A directory per locale
 

@@ -5,10 +5,14 @@ every message is checked before it is written: each placeholder kept, each plura
 target language's forms, and anything rejected sent back to the model with what is wrong.
 
 ```sh
+i18n-ai scan -t fr,ar                # where the project's i18n library keeps its locales
 i18n-ai scan locales/en -t fr,ar
 i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clinic's booking site"
 ```
 
+- **Knows your framework**: i18next, next-intl, FormatJS, vue-i18n, Nuxt, Angular, Transloco,
+  ngx-translate, svelte-i18n, Paraglide, Rails, Django and Flutter are found from the project's
+  manifests, with where they keep their locales.
 - **Any tree**: a directory per locale, a file per locale, or one bundle of them all, in JSON,
   YAML (its comments kept), Flutter's ARB, gettext PO or XLIFF.
 - **A precheck first**: the tree, which files qualify, and what each target needs, shown before
@@ -20,7 +24,8 @@ i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clin
   first needed.
 - **Incremental**: the good translations a target already has are kept.
 
-Start with [Getting started](guide/getting-started.md). [Locale trees](guide/trees.md) explains
+Start with [Getting started](guide/getting-started.md). [Your framework](guide/frameworks.md)
+tells what each i18n library's preset finds, [Locale trees](guide/trees.md) explains
 the layouts it reads and writes, [The rules](guide/rules.md) what makes a translation pass, and
 [Providers](guide/providers.md) how models are chosen and installed. Every option is listed under
 [Commands](reference/commands.md).
@@ -30,6 +35,7 @@ the layouts it reads and writes, [The rules](guide/rules.md) what makes a transl
 :caption: Guide
 
 guide/getting-started
+guide/frameworks
 guide/trees
 guide/rules
 guide/providers

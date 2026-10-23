@@ -16,7 +16,15 @@ from ...domain.exports.locale import LocaleFormat, SourceLocaleUnknown
 from ...domain.exports.provider import ModelSpec
 from ...runtime.answers import Answers, load_answers
 from .. import interactive
-from ..common import MissingParameter, locales, run, tree_request
+from ..common import (
+    MissingParameter,
+    PresetOption,
+    locales,
+    project_tree,
+    run,
+    tree_request,
+    with_preset,
+)
 from ..rendering import render_receipt, render_scan
 
 
@@ -26,7 +34,8 @@ def generate(
         typer.Argument(
             help=(
                 "A locale directory (locales/en), file (en.json), bundle, or the directory "
-                "holding the locales. Asked for when missing, at a terminal."
+                "holding the locales. Default: where the project's preset keeps them; asked for "
+                "at a terminal."
             ),
             show_default=False,
         ),
@@ -139,14 +148,11 @@ def generate(
             "--no-input", help="Ask nothing: fail on what is missing, as on CI or when piped."
         ),
     ] = False,
+    preset: PresetOption = None,
 ) -> None:
     """Generate target locales from the source locale tree, with an agent per file and locale.
     At a terminal, what is missing is asked for."""
     asking = interactive.is_interactive(no_input)
-    if not asking and path is None:
-        raise MissingParameter("argument", "'PATH'")
-    if not asking and targets is None:
-        raise MissingParameter("option", "'--target'")
     codes = locales(targets)
     if targets is not None and not codes:
         raise typer.BadParameter("name at least one target locale", param_hint="--target")
@@ -167,12 +173,27 @@ def generate(
                 return await wizard.confirm(question)
             return Confirm.ask(question, console=console, default=True)
 
-        # 0. What the run was not told, asked: the tree, its source, the targets, the output
+        # 0. What the run was not told, found from the project's preset or asked: the tree, its
+        #    source, the targets, the output
         tree = tree_request(path or Path(), source, output, include, exclude, format)
+        if path is not None:
+            tree, _ = await with_preset(mediator, console, tree, preset, given=True)
+        elif wizard is not None:
+            preset_tree, match = await with_preset(mediator, console, tree, preset, given=False)
+            picked = await wizard.tree(match)
+            # The preset's format is for its own locales
+            tree = dataclasses.replace(
+                preset_tree if picked.resolve() == preset_tree.path.resolve() else tree, path=picked
+            )
+        else:
+            detected = await project_tree(mediator, console, tree, preset)
+            if detected is None:
+                raise MissingParameter("argument", "'PATH'")
+            tree = detected
+        if wizard is None and targets is None:
+            raise MissingParameter("option", "'--target'")
         targets_ = codes
         if wizard is not None:
-            if path is None:
-                tree = dataclasses.replace(tree, path=await wizard.tree())
             try:
                 found = await mediator.send(ScanLocaleTreeQuery(tree))
             except SourceLocaleUnknown as error:
@@ -267,7 +288,7 @@ def generate(
                 spec,
                 tree.source,
                 wizard.shown(tree.output) if tree.output else None,
-                _flags(context, include, exclude, format, overwrite, strict, classify),
+                _flags(context, include, exclude, format, preset, overwrite, strict, classify),
             )
             console.print(f"\nTo run it again: [bold]{line}[/]")
         return 0 if generation.ok else 1
@@ -280,6 +301,7 @@ def _flags(
     include: list[str] | None,
     exclude: list[str] | None,
     format: LocaleFormat | None,
+    preset: str | None,
     overwrite: bool,
     strict: bool,
     classify: bool,
@@ -292,5 +314,7 @@ def _flags(
         flags += ["--exclude", pattern]
     if format is not None:
         flags += ["--format", format.value]
+    if preset is not None:
+        flags += ["--preset", preset]
     flags += [flag for flag, on in (("--overwrite", overwrite), ("--strict", strict)) if on]
     return flags if classify else [*flags, "--no-classify"]

@@ -10,6 +10,7 @@ from . import interactive
 from .common.runner import errors
 from .handlers.auth import auth
 from .handlers.generate import generate
+from .handlers.presets import presets
 from .handlers.providers import providers
 from .handlers.scan import scan
 
@@ -23,6 +24,7 @@ app = typer.Typer(
 )
 app.command("scan")(scan)
 app.command("generate")(generate)
+app.command("presets")(presets)
 app.add_typer(providers, name="providers")
 app.add_typer(auth, name="auth")
 
