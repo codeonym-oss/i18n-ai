@@ -185,7 +185,9 @@ def test_a_rooted_file_is_rooted_at_its_locale(tmp_path: Path) -> None:
 
     yaml.write(tmp_path / "fr.yml", {"hello": "Bonjour"}, like, "fr")
 
-    assert (tmp_path / "fr.yml").read_text() == "# Rails' locales\n\nfr:\n  hello: Bonjour\n"
+    assert (tmp_path / "fr.yml").read_text(
+        encoding="utf-8"
+    ) == "# Rails' locales\n\nfr:\n  hello: Bonjour\n"
 
 
 def test_an_existing_target_keeps_its_other_keys(tmp_path: Path) -> None:
@@ -194,7 +196,9 @@ def test_an_existing_target_keeps_its_other_keys(tmp_path: Path) -> None:
 
     yaml.write(tmp_path / "fr.yml", {"hello": "Bonjour"}, like, "fr")
 
-    assert (tmp_path / "fr.yml").read_text() == "fr:\n  hello: Bonjour\nfr-CA:\n  hello: Allo\n"
+    assert (tmp_path / "fr.yml").read_text(
+        encoding="utf-8"
+    ) == "fr:\n  hello: Bonjour\nfr-CA:\n  hello: Allo\n"
 
 
 def test_a_bundle_takes_the_new_locale_last(tmp_path: Path) -> None:
@@ -203,7 +207,8 @@ def test_a_bundle_takes_the_new_locale_last(tmp_path: Path) -> None:
     yaml.write(like.path, {"hello": "Hallo"}, like, "de")
 
     assert (
-        like.path.read_text() == "en:\n  hello: Hello # greeting\nde:\n  hello: Hallo # greeting\n"
+        like.path.read_text(encoding="utf-8")
+        == "en:\n  hello: Hello # greeting\nde:\n  hello: Hallo # greeting\n"
     )
 
 
@@ -221,7 +226,7 @@ def test_the_indent_and_the_start_are_kept(tmp_path: Path, text: str, written: s
 
     yaml.write(tmp_path / "fr.yml", content, like, None)
 
-    assert (tmp_path / "fr.yml").read_text() == written
+    assert (tmp_path / "fr.yml").read_text(encoding="utf-8") == written
 
 
 @pytest.mark.parametrize("name", ["en.json", "en.yml"])
@@ -277,11 +282,11 @@ def test_an_arb_target_names_its_locale_and_keeps_its_own_metadata(tmp_path: Pat
 
     arb.write(target, {"title": "Notes", "count": "{n, plural, other{# notes}}"}, like, None, "fr")
 
-    written = json.loads(target.read_text())
+    written = json.loads(target.read_text(encoding="utf-8"))
     assert list(written) == ["@@locale", "@@x-team", "title", "@title", "count"]
     assert written["@@locale"] == "fr"
     assert written["@title"] == {"description": "Le nom"}  # its own, not the source's
-    assert target.read_text().startswith('{\n    "@@locale"')  # the source's indent
+    assert target.read_text(encoding="utf-8").startswith('{\n    "@@locale"')  # the source's indent
 
 
 def test_an_arb_target_without_locale_in_its_source_gets_none(tmp_path: Path) -> None:
@@ -289,7 +294,7 @@ def test_an_arb_target_without_locale_in_its_source_gets_none(tmp_path: Path) ->
 
     arb.write(tmp_path / "app_de.arb", {"a": "Ah"}, like, None, "de")
 
-    assert json.loads((tmp_path / "app_de.arb").read_text()) == {"a": "Ah"}
+    assert json.loads((tmp_path / "app_de.arb").read_text(encoding="utf-8")) == {"a": "Ah"}
 
 
 def test_a_po_source_is_its_msgids(tmp_path: Path) -> None:
@@ -351,7 +356,7 @@ def test_a_new_po_translation_is_the_template_filled(tmp_path: Path) -> None:
 
     po.write(tmp_path / "ar.po", content, like, None, "ar")
 
-    written = (tmp_path / "ar.po").read_text()
+    written = (tmp_path / "ar.po").read_text(encoding="utf-8")
     assert written.startswith("# The app's messages.\nmsgid")  # no longer fuzzy
     assert '"Last-Translator: i18n-ai\\n"' in written
     assert '"Language-Team: Arabic\\n"' in written
@@ -374,7 +379,7 @@ def test_an_existing_po_translation_keeps_its_own(tmp_path: Path) -> None:
 
     po.write(target, {"Save": "Сохранить", "month\x04May": "мая"}, like, None, "ru")
 
-    written = target.read_text()
+    written = target.read_text(encoding="utf-8")
     assert "plural=(n%10==1" in written  # its own Plural-Forms
     assert '# Ours\nmsgid "Save"' in written
     assert 'msgid "Kept"\nmsgstr "Оставлен"' in written
@@ -391,7 +396,7 @@ def test_an_existing_po_translation_is_written_in_its_own_forms(tmp_path: Path) 
 
     po.write(target, {"%(n)d file": forms}, like, None, "ru")
 
-    written = target.read_text()
+    written = target.read_text(encoding="utf-8")
     assert RU_OLD_FORMS.split(";")[0] in written  # nplurals=3, kept
     assert 'msgstr[0] "один"\nmsgstr[1] "несколько"\nmsgstr[2] "много"\n' in written
     assert "msgstr[3]" not in written
