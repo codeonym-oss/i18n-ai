@@ -166,6 +166,9 @@ def build_atom_graph(gateway: ILlmGateway) -> CompiledStateGraph[Any, Any, Any, 
                     violation for violations in failed.values() for violation in violations
                 ),
                 warnings=tuple(state["warnings"]),
+                rejected={
+                    schema.unit(unit_id).path: state["previous"].get(unit_id) for unit_id in failed
+                },
             )
         }
 

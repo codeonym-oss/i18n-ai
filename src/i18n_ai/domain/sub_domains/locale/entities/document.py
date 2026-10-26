@@ -1,5 +1,6 @@
+import copy
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -47,6 +48,21 @@ class LocaleDocument:
                 continue
             return None
         return node
+
+    def without(self, paths: Iterable[KeyPath]) -> "LocaleDocument":
+        """A copy without the values at `paths`: an object's key is deleted, an array's item
+        becomes None, so the other indexes hold. A path that is not there is ignored."""
+        content = copy.deepcopy(self.content)
+        for path in paths:
+            if not path.segments:
+                continue
+            parent = LocaleDocument(content).get(KeyPath(path.segments[:-1]))
+            last = path.segments[-1]
+            if isinstance(parent, dict) and isinstance(last, str):
+                parent.pop(last, None)
+            elif isinstance(parent, list) and isinstance(last, int) and 0 <= last < len(parent):
+                parent[last] = None
+        return LocaleDocument(content, self.notes)
 
 
 def _leaves(node: Any, path: KeyPath) -> Iterator[tuple[KeyPath, Any]]:

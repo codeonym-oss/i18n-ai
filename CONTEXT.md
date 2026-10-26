@@ -103,6 +103,10 @@ _Avoid_: cached, reused (in prose)
 The source text a message keeps when it never passed the rules, so that its document is whole. Such
 a file is **partial**, unless the generation is **strict**, when it is not written.
 
+**Fallback record**:
+The fallbacks a tree's generations left, in `.i18n-ai-fallbacks.json` beside its targets, so that
+the next run translates them again instead of keeping them.
+
 ## Models
 
 **Model spec**:

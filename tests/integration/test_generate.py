@@ -109,12 +109,19 @@ async def test_a_rejected_message_is_sent_back_with_its_problem(examples: Path) 
     assert read(locales / "de" / "common.json")["app"]["welcome"] == "[de] Welcome back, {{name}}!"
 
 
-async def test_a_message_that_keeps_failing_falls_back_or_is_refused(examples: Path) -> None:
-    class Stubborn(FakeGateway):
-        async def translate(self, batch):  # type: ignore[no-untyped-def]
-            answers = await super().translate(batch)
-            return {unit_id: text.replace("{{name}}", "") for unit_id, text in answers.items()}
+class Stubborn(FakeGateway):
+    """Loses `placeholder` in every translation, so its messages fall back."""
 
+    def __init__(self, placeholder: str = "{{name}}") -> None:
+        super().__init__()
+        self.placeholder = placeholder
+
+    async def translate(self, batch):  # type: ignore[no-untyped-def]
+        answers = await super().translate(batch)
+        return {unit_id: text.replace(self.placeholder, "") for unit_id, text in answers.items()}
+
+
+async def test_a_message_that_keeps_failing_falls_back_or_is_refused(examples: Path) -> None:
     gateway = Stubborn()
     container = build_container(build_mediator(), Console(quiet=True), FakeModel(gateway))
     async with container() as request:
@@ -396,3 +403,113 @@ async def test_a_laravel_tree_with_its_source_takes_the_target_s_forms(
     assert russian["apples"].count("|") == 2
     assert russian["o"] == "{0}[ru] None|[1,*][ru] :count orders"
     assert "fr.json" not in str(result.path)
+
+
+async def generate(
+    gateway: FakeGateway, tree: TreeRequest, *targets: str, **options: object
+) -> list:  # type: ignore[type-arg]
+    container = build_container(build_mediator(), Console(quiet=True), FakeModel(gateway))
+    async with container() as request:
+        mediator = await request.get(Mediator)
+        receipt = await mediator.send(
+            GenerateLocalesCommand(
+                tree, codes(*targets), MODEL, GenerationOptions(max_attempts=2, **options)
+            )
+        )
+    await container.close()
+    return list(receipt.results)
+
+
+async def test_a_fallback_is_recorded_beside_the_targets(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    tree = TreeRequest(locales / "en", include=("common.json",))
+
+    await generate(Stubborn(), tree, "it")
+
+    assert read(locales / ".i18n-ai-fallbacks.json") == {
+        "version": 1,
+        "fallbacks": [
+            {
+                "file": "it/common.json",
+                "path": ["app", "welcome"],
+                "problems": [{"rule": "placeholders", "message": "missing {{name}}"}],
+                "rejected": "[it] Welcome back, !",
+            }
+        ],
+    }
+
+
+async def test_a_recorded_fallback_is_translated_again(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    tree = TreeRequest(locales / "en", include=("common.json",))
+    await generate(Stubborn(), tree, "it")
+
+    gateway = FakeGateway()
+    (result,) = await generate(gateway, tree, "it")
+
+    sent = [str(unit.path) for batch in gateway.batches for unit in batch.units]
+    assert sent == ["app.welcome"]
+    assert result.translated == 1
+    assert read(locales / "it" / "common.json")["app"]["welcome"] == "[it] Welcome back, {{name}}!"
+    assert not (locales / ".i18n-ai-fallbacks.json").exists()
+
+
+async def test_a_run_without_fallbacks_writes_no_record(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+
+    await generate(FakeGateway(), TreeRequest(locales / "en", include=("common.json",)), "it")
+
+    assert not (locales / ".i18n-ai-fallbacks.json").exists()
+
+
+async def test_a_run_keeps_the_entries_it_did_not_write(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    tree = TreeRequest(locales / "en", include=("common.json",))
+    await generate(Stubborn(), tree, "it", "de")
+
+    await generate(FakeGateway(), tree, "it")
+
+    files = [entry["file"] for entry in read(locales / ".i18n-ai-fallbacks.json")["fallbacks"]]
+    assert files == ["de/common.json"]
+
+
+class Unreachable(FakeGateway):
+    async def translate(self, batch):  # type: ignore[no-untyped-def]
+        raise ConnectionError("the model is unreachable")
+
+
+async def test_a_refused_or_failed_file_leaves_the_record_as_it_was(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    tree = TreeRequest(locales / "en", include=("common.json",))
+    await generate(Stubborn(), tree, "it")
+    before = read(locales / ".i18n-ai-fallbacks.json")
+
+    (refused,) = await generate(Stubborn(), tree, "it", strict=True)
+    (failed,) = await generate(Unreachable(), tree, "it")
+
+    assert (refused.status, failed.status) == (ResultStatus.REFUSED, ResultStatus.FAILED)
+    assert read(locales / ".i18n-ai-fallbacks.json") == before
+
+
+async def test_a_bundle_s_record_names_its_locale(examples: Path) -> None:
+    bundle = examples / "bundle" / "i18n.json"
+    await generate(Stubborn("%{name}"), TreeRequest(bundle), "fr")
+
+    (entry,) = read(examples / "bundle" / ".i18n-ai-fallbacks.json")["fallbacks"]
+    assert (entry["file"], entry["key"], entry["path"]) == ("i18n.json", "fr", ["greeting"])
+
+    await generate(FakeGateway(), TreeRequest(bundle), "fr")
+
+    assert read(bundle)["fr"]["greeting"] == "[fr] Hello, %{name}!"
+    assert not (examples / "bundle" / ".i18n-ai-fallbacks.json").exists()
+
+
+async def test_a_laravel_fallback_is_translated_again_from_its_key(examples: Path) -> None:
+    lang = examples / "laravel" / "lang"
+    await generate(Stubborn(":name"), laravel(lang), "de")
+    assert read(lang / "de.json")["Welcome, :name!"] == "Welcome, :name!"
+
+    await generate(FakeGateway(), laravel(lang), "de")
+
+    assert read(lang / "de.json")["Welcome, :name!"] == "[de] Welcome, :name!"
+    assert not (lang / ".i18n-ai-fallbacks.json").exists()

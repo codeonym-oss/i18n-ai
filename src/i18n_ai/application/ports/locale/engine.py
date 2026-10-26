@@ -5,6 +5,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from ....domain.exports.locale import (
+    KeyPath,
     LocaleCode,
     LocaleDocument,
     MessageSyntax,
@@ -70,7 +71,8 @@ class FileClassified:
 @dataclass(frozen=True)
 class FileTranslated:
     """A file was translated into a target. `failures` are the messages that kept failing the
-    rules, which hold their source text in `content`."""
+    rules, which hold their source text in `content`; `rejected` is the model's last
+    translation of each, by its path, None when it gave none."""
 
     job: TranslationJob
     content: dict[str, Any]
@@ -78,6 +80,7 @@ class FileTranslated:
     reused: int
     failures: tuple[Violation, ...]
     warnings: tuple[Violation, ...]
+    rejected: Mapping[KeyPath, str | None]
 
 
 @dataclass(frozen=True)

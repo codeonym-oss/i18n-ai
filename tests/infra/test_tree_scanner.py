@@ -409,3 +409,19 @@ async def test_without_laravel_s_syntax_the_tree_is_read_as_any(tmp_path: Path) 
         await FileSystemLocaleTreeScanner().scan(TreeRequest(lang))
     tree = await FileSystemLocaleTreeScanner().scan(TreeRequest(lang, source=LocaleCode("fr")))
     assert (tree.syntax, tree.source_from) == (MessageSyntax.STANDARD, ())
+
+
+@pytest.mark.parametrize(
+    ("tree", "syntax"),
+    [("icu/messages", MessageSyntax.STANDARD), ("laravel/lang", MessageSyntax.LARAVEL)],
+)
+async def test_the_fallback_record_is_not_a_locale(
+    examples: Path, tree: str, syntax: MessageSyntax
+) -> None:
+    request = TreeRequest(examples / tree, syntax=syntax)
+    before = await FileSystemLocaleTreeScanner().scan(request)
+    (examples / tree / ".i18n-ai-fallbacks.json").write_text('{"version": 1, "fallbacks": []}')
+
+    after = await FileSystemLocaleTreeScanner().scan(request)
+
+    assert after == before
