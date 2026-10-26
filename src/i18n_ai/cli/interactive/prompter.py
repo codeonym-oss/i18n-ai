@@ -1,18 +1,13 @@
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
-from dataclasses import dataclass
 from typing import Any
 
 import questionary
 
+from ..common.setup import Choice
+
 # A list longer than this can be searched by typing.
 _SEARCHABLE = 10
-
-
-@dataclass(frozen=True)
-class Choice:
-    value: str
-    title: str
 
 
 class Prompter(ABC):

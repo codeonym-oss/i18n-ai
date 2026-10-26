@@ -13,7 +13,26 @@ first time you use it, into its own environment, after asking. See [Providers](p
 
 ## Just run it
 
-In your project, run `i18n-ai` alone, and answer its questions:
+In your project, run `i18n-ai` alone. At a terminal it opens a full-screen form:
+
+![The setup form of i18n-ai in a Laravel project](tui.svg)
+
+It finds the locale trees in the project, the one your i18n library keeps first (see
+[Your framework](frameworks.md)), offers every CLDR locale (the ones already in the tree
+checked; type to search), lists the providers with the ones ready to use first, and reads the
+chosen provider's model list from its API, the recommended models first. A field waits until
+what it depends on is set: the model for its provider, the targets for their tree. A missing API
+key is asked for, hidden, and used for that run; it is saved in the system keyring only if you
+tick the box. The line beside **Run** says how many files and locales the run covers.
+
+`Ctrl+R` runs it: no other question, except to install the provider's package when it is
+missing. The run screen shows each file and locale as it is done, then the receipt, and the
+one-line command that repeats the run without the form. `b` goes back to the form, `q` quits,
+`Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.
+
+### The prompts
+
+`i18n-ai generate` at a terminal asks for what it was not told, one question at a time:
 
 ```text
 ? Which locale tree?          » public/locales  [directory: en, fr]
@@ -23,13 +42,8 @@ In your project, run `i18n-ai` alone, and answer its questions:
 ? Which openai model?         » gpt-4.1-mini  · recommended
 ```
 
-It finds the locale trees in the project, the one your i18n library keeps first (see
-[Your framework](frameworks.md)), offers every CLDR locale (the ones already in the tree
-picked), lists the providers with the ones ready to use first, and reads the chosen provider's
-model list from its API, the recommended models first. A missing API key is asked for, hidden,
-and used for that run; it is saved in the system keyring only if you say so (the default is
-no). Then comes the precheck and the go-ahead, as below, and at the end
-the one-line command that repeats the run without a question.
+Then comes the precheck and the go-ahead, as below, and at the end the one-line command that
+repeats the run without a question.
 
 Only what a run is not told is asked: `i18n-ai generate locales/en -t fr` asks for the model
 alone, and not even that when `I18N_AI_MODEL` is set. The answers are remembered per project and

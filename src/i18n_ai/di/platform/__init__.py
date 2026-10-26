@@ -1,4 +1,4 @@
-from .console import ConsoleProvider
+from .console import ConsoleProvider, GivenProgress
 from .credentials import CredentialsProvider
 from .filesystem import FileSystemProvider
 from .langchain import LangChainProvider
@@ -8,6 +8,7 @@ __all__ = [
     "ConsoleProvider",
     "CredentialsProvider",
     "FileSystemProvider",
+    "GivenProgress",
     "LangChainProvider",
     "PackagesProvider",
 ]

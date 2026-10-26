@@ -32,6 +32,8 @@ dependencies = [
     "ruamel-yaml>=0.18",
     "polib>=1.2",
     "lxml>=5",
+    # The full-screen TUI that `i18n-ai` opens at a terminal.
+    "textual>=8.2",
 ]
 keywords = [
     "i18n", "l10n", "localization", "translation", "locales", "i18next", "icu", "messageformat",
@@ -109,6 +111,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Typer reads the command signatures' annotations at runtime, so their imports must stay real.
 "src/i18n_ai/cli/**" = ["TC"]
+# Textual's BINDINGS and CSS are class attributes it reads.
+"src/i18n_ai/cli/tui/**" = ["TC", "RUF012"]
 # mediary and dishka read handler and provider signatures at runtime.
 "src/i18n_ai/application/**" = ["TC"]
 "src/i18n_ai/di/**" = ["TC"]
@@ -182,7 +186,7 @@ type = "forbidden"
 source_modules = ["i18n_ai.domain", "i18n_ai.application"]
 forbidden_modules = [
     "langchain", "langchain_core", "langgraph", "typer", "rich", "dishka", "dotenv", "questionary",
-    "httpx", "keyring", "ruamel", "polib", "lxml",
+    "httpx", "keyring", "ruamel", "polib", "lxml", "textual",
 ]
 allow_indirect_imports = true
 
@@ -192,4 +196,13 @@ name = "The CLI reaches the adapters only through the container"
 type = "forbidden"
 source_modules = ["i18n_ai.cli"]
 forbidden_modules = ["i18n_ai.infra"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+id = "tui-alone"
+name = "Textual stays in the TUI"
+type = "forbidden"
+source_modules = ["i18n_ai"]
+forbidden_modules = ["textual"]
+ignore_imports = ["i18n_ai.cli.tui.** -> textual"]
 allow_indirect_imports = true

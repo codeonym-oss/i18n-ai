@@ -5,8 +5,14 @@ i18n-ai [-v | -vv] [--version] [COMMAND]
 ```
 
 `-v` shows the steps, `-vv` everything, including the HTTP requests. `i18n-ai` alone, at a
-terminal, is a guided `generate`: every option it needs is asked for. Elsewhere it shows this
-help.
+terminal, opens the TUI, as `i18n-ai tui` does. Elsewhere it shows this help.
+
+## `i18n-ai tui`
+
+A full-screen form for a generation: the tree, its targets and where they go, the provider, its
+model and key. `Ctrl+R` runs it, then shows its receipt and the `generate` command that repeats
+it; `b` goes back to the form, `q` quits, `Ctrl+P` opens the command palette. See
+[Getting started](../guide/getting-started.md).
 
 ## `i18n-ai scan [PATH]`
 
