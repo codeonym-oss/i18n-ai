@@ -6,23 +6,29 @@ from dishka import AsyncContainer
 from mediary import Mediator
 from rich.console import Console
 
+from ..application.ports.progress import IGenerationProgress
 from ..runtime.settings import Settings
 from .container import build_container
 from .messaging import build_mediator
+from .platform import GivenProgress
 
 logger = logging.getLogger(__name__)
 
 
 class Bootstrap:
     """Wires every handler to the mediator, builds the container, and opens one request scope
-    for the command the CLI runs; leaving closes both.
+    for the command the CLI runs; leaving closes both. A `progress` given is shown in place of
+    the console's.
 
         async with Bootstrap(settings, console) as bootstrap:
             report = await bootstrap.mediator.send(ScanLocaleTreeQuery(...))"""
 
-    def __init__(self, settings: Settings, console: Console) -> None:
+    def __init__(
+        self, settings: Settings, console: Console, progress: IGenerationProgress | None = None
+    ) -> None:
         self.settings = settings
         self.console = console
+        self._progress = progress
         self._container: AsyncContainer | None = None
         self._request: AsyncContainer | None = None
         self._mediator: Mediator | None = None
@@ -35,7 +41,8 @@ class Bootstrap:
 
     async def __aenter__(self) -> Self:
         # 1. Wire every handler, then build the container that provides them
-        self._container = build_container(build_mediator(), self.console)
+        overrides = (GivenProgress(self._progress),) if self._progress is not None else ()
+        self._container = build_container(build_mediator(), self.console, *overrides)
 
         # 2. Open the request scope, and its mediator
         self._request = await self._container().__aenter__()

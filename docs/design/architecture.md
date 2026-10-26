@@ -52,7 +52,7 @@ src/i18n_ai/
 │                      atom, gateway, prompts) · packages (uv / pip) · console (progress) · keyring
 ├── di/                platform providers · messaging (mediator, scanned) · container · bootstrap
 ├── runtime/           settings, from the environment and .env
-└── cli/               Typer: handlers, rendering, the runner
+└── cli/               Typer: handlers, rendering, the runner · the prompts · tui/ (Textual)
 ```
 
 Each intent is a slice: `cmd.py` or `query.py`, `handler.py`, and `receipt.py` or `view.py`. Its
@@ -61,7 +61,8 @@ handler is marked `@command_handler` or `@query_handler`, and `mediator.scan` fi
 command.
 
 `lint-imports` holds the layers in place: each imports only those below it, the domain and the
-application import no I/O library, and the CLI reaches the adapters only through `di`.
+application import no I/O library, the CLI reaches the adapters only through `di`, and Textual
+stays in `cli/tui/`.
 
 ## Why
 

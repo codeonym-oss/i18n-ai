@@ -3,7 +3,6 @@ the mediator's queries give (the trees in the project, CLDR's locales, the provi
 models) and the last answers in this project as defaults."""
 
 import os
-import shlex
 import sys
 from pathlib import Path
 
@@ -14,12 +13,21 @@ from ...application.exports.locale import DetectLocaleTreesQuery, ListLocalesQue
 from ...application.exports.provider import (
     ListModelsQuery,
     ListProvidersQuery,
-    ProviderView,
     SetProviderKeyCommand,
 )
 from ...domain.exports.locale import LocaleCode
 from ...runtime.answers import Answers, save_answers
-from .prompter import Choice, Prompter
+from ..common.setup import (
+    Choice,
+    locale_choices,
+    model_choices,
+    output_choices,
+    provider_choices,
+    source_choices,
+    tree_choices,
+    within,
+)
+from .prompter import Prompter
 
 _OTHER = "\0other"
 
@@ -45,6 +53,7 @@ class Wizard:
         self._console = console
         self._project = project
         self._last = answers
+        self._shown = within(project)
         self.asked = False  # whether anything was asked, for the equivalent command
         self._keys: set[str] = set()  # the variables whose key was asked
 
@@ -53,29 +62,13 @@ class Wizard:
         was picked last time."""
         candidates = await self._mediator.send(DetectLocaleTreesQuery(self._project))
         self.asked = True
-        ours = preset.tree if preset is not None else None
-        if ours is not None:
-            candidates = tuple(
-                candidate for candidate in candidates if candidate.path.resolve() != ours.resolve()
-            )
-        if not candidates and ours is None:
+        choices, default = tree_choices(candidates, preset, self._last, self.shown)
+        if not choices:
             self._console.print(f"[dim]No locale tree found under {self._project}.[/]")
             return Path(
                 await self._ask.text("Path to the source locale tree", self._last.tree or "")
             )
-        choices = [
-            Choice(
-                self.shown(candidate.path),
-                f"{self.shown(candidate.path)}  "
-                f"[{candidate.layout}, {'+'.join(candidate.formats)}: {_some(candidate.locales)}]",
-            )
-            for candidate in candidates
-        ]
-        if preset is not None and ours is not None:
-            label = f"{self.shown(ours)}  [{preset.preset.name} preset]"
-            choices.insert(0, Choice(self.shown(ours), label))
         choices.append(Choice(_OTHER, "Another path…"))
-        default = self._last.tree or (self.shown(ours) if ours is not None else None)
         picked = await self._ask.select("Which locale tree?", choices, default)
         if picked == _OTHER:
             return Path(
@@ -85,33 +78,24 @@ class Wizard:
 
     async def source(self, locales: list[str]) -> LocaleCode:
         self.asked = True
-        choices = [Choice(code, _title(LocaleCode(code))) for code in locales]
         return LocaleCode(
-            await self._ask.select("Which locale is the source?", choices, self._last.source)
+            await self._ask.select(
+                "Which locale is the source?", source_choices(locales), self._last.source
+            )
         )
 
     async def targets(self, source: str, existing: tuple[str, ...]) -> tuple[LocaleCode, ...]:
         self.asked = True
-        origin = LocaleCode(source)
         known = await self._mediator.send(ListLocalesQuery())
-        present = [LocaleCode(code) for code in existing]
-        choices = [Choice(locale.value, f"{_title(locale)} · in the tree") for locale in present]
-        taken = {locale.key for locale in [*present, origin]}
-        for view in known:
-            locale = LocaleCode(view.code)
-            if locale.key not in taken:
-                choices.append(Choice(locale.value, _title(locale)))
-        checked = {*existing, *self._last.targets} - {source}
+        choices, checked = locale_choices(known, existing, source, self._last)
         picked = await self._ask.checkbox("Which locales to generate?", choices, checked)
         return tuple(LocaleCode(code) for code in picked)
 
     async def output(self, beside: Path) -> Path | None:
         """None: beside the source."""
-        choices = [Choice("", f"Beside the source ({self.shown(beside)})")]
-        if self._last.output:
-            choices.insert(0, Choice(self._last.output, f"{self._last.output} (last time)"))
+        choices, default = output_choices(beside, self._last, self.shown)
         choices.append(Choice(_OTHER, "Another directory…"))
-        picked = await self._ask.select("Where do the new locales go?", choices, self._last.output)
+        picked = await self._ask.select("Where do the new locales go?", choices, default)
         if picked == _OTHER:
             picked = await self._ask.text("Output directory", self._last.output or "")
         return Path(picked) if picked else None
@@ -119,13 +103,9 @@ class Wizard:
     async def model(self) -> str:
         """The provider, its key when it is missing, then one of its models."""
         self.asked = True
-        providers = sorted(
-            await self._mediator.send(ListProvidersQuery()),
-            key=lambda provider: (not (provider.installed or provider.key_set), provider.name),
-        )
-        last_provider, _, last_model = (self._last.model or "").partition(":")
-        choices = [Choice(provider.name, _provider_title(provider)) for provider in providers]
-        name = await self._ask.select("Which provider?", choices, last_provider or None)
+        providers = await self._mediator.send(ListProvidersQuery())
+        choices, default = provider_choices(providers, self._last)
+        name = await self._ask.select("Which provider?", choices, default)
         provider = next(provider for provider in providers if provider.name == name)
         if provider.key and not provider.key_set:
             await self.key(provider.name, provider.key)
@@ -135,12 +115,8 @@ class Wizard:
             self._console.print(f"[dim]{listing.problem}; showing the recommended models.[/]")
         model = _OTHER
         if listing.models:
-            choices = [
-                Choice(model.id, f"{model.id}  · recommended" if model.recommended else model.id)
-                for model in listing.models
-            ]
+            choices, default = model_choices(listing, provider.name, self._last)
             choices.append(Choice(_OTHER, "Another model…"))
-            default = last_model if last_provider == provider.name else None
             model = await self._ask.select(f"Which {provider.name} model?", choices, default)
         while model == _OTHER or not model:
             model = await self._ask.text(f"The {provider.name} model's name")
@@ -177,44 +153,4 @@ class Wizard:
 
     def shown(self, path: Path) -> str:
         """`path` relative to the project when it is inside it."""
-        absolute = path.expanduser().resolve()
-        try:
-            return absolute.relative_to(self._project.resolve()).as_posix() or "."
-        except ValueError:
-            return str(path)
-
-
-def command_line(
-    path: str,
-    targets: tuple[LocaleCode, ...],
-    model: str | None,
-    source: LocaleCode | None,
-    output: str | None,
-    flags: list[str],
-) -> str:
-    """The `i18n-ai generate` command that repeats a run without asking anything."""
-    words = ["i18n-ai", "generate", path, "-t", ",".join(target.value for target in targets)]
-    if source is not None:
-        words += ["-s", source.value]
-    if output is not None:
-        words += ["-o", output]
-    if model is not None:
-        words += ["-m", model]
-    return shlex.join([*words, *flags])
-
-
-def _title(locale: LocaleCode) -> str:
-    rtl = " (rtl)" if locale.direction == "rtl" else ""
-    return f"{locale.value} — {locale.display_name}{rtl}"
-
-
-def _some(locales: tuple[str, ...], shown: int = 6) -> str:
-    more = f" +{len(locales) - shown}" if len(locales) > shown else ""
-    return ", ".join(locales[:shown]) + more
-
-
-def _provider_title(provider: ProviderView) -> str:
-    tags = [
-        tag for tag, on in (("key set", provider.key_set), ("installed", provider.installed)) if on
-    ]
-    return f"{provider.name}  ({', '.join(tags)})" if tags else provider.name
+        return self._shown(path)

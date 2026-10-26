@@ -5,16 +5,12 @@ from typing import Annotated
 import typer
 from rich.prompt import Confirm
 
-from ...application.exports.locale import (
-    GenerateLocalesCommand,
-    GenerationOptions,
-    ScanLocaleTreeQuery,
-)
+from ...application.exports.locale import GenerateLocalesCommand, ScanLocaleTreeQuery
 from ...application.exports.provider import GetProviderStatusQuery, InstallProviderCommand
 from ...di import Bootstrap
 from ...domain.exports.locale import LocaleFormat, SourceLocaleUnknown
 from ...domain.exports.provider import ModelSpec
-from ...runtime.answers import Answers, load_answers
+from ...runtime.answers import load_answers
 from .. import interactive
 from ..common import (
     MissingParameter,
@@ -25,6 +21,7 @@ from ..common import (
     tree_request,
     with_preset,
 )
+from ..common.setup import answers_of, generation_options
 from ..rendering import render_receipt, render_scan
 
 
@@ -254,22 +251,15 @@ def generate(
         if not yes and not await confirm(question):
             return 1
         if wizard is not None:
-            wizard.remember(
-                Answers(
-                    tree=wizard.shown(tree.path),
-                    source=tree.source.value if tree.source else None,
-                    targets=[target.value for target in targets_],
-                    output=wizard.shown(tree.output) if tree.output else None,
-                    model=spec,
-                )
-            )
+            wizard.remember(answers_of(tree, targets_, spec, wizard.shown))
 
         # 4. The generation
-        options = GenerationOptions(
+        options = generation_options(
+            defaults,
             context=context,
-            batch_size=batch_size or defaults.batch_size,
-            concurrency=concurrency or defaults.concurrency,
-            max_attempts=max_attempts or defaults.max_attempts,
+            batch_size=batch_size,
+            concurrency=concurrency,
+            max_attempts=max_attempts,
             classify=classify,
             overwrite=overwrite,
             strict=strict,

@@ -9,7 +9,7 @@ from rich.console import Console
 from ...application.contract import ApplicationException
 from ...di import Bootstrap, InfraException
 from ...domain.contract import DomainException
-from ...runtime.settings import build_settings
+from ...runtime.settings import Settings, build_settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +19,19 @@ errors = Console(stderr=True, highlight=False)
 Flow = Callable[[Bootstrap], Awaitable[int | None]]
 
 
-def run(flow: Flow) -> None:
-    """Run a CLI command's flow inside the app, and turn what it raises into an exit code: 2 for
-    a refusal, with its message, 130 when interrupted."""
+def valid_settings() -> Settings:
+    """The settings, or the command ends saying what is wrong with them."""
     try:
-        settings = build_settings()
+        return build_settings()
     except ValidationError as error:
         errors.print(f"[red]error:[/] the I18N_AI_* settings are invalid:\n{error}")
         raise typer.Exit(2) from error
+
+
+def run(flow: Flow) -> None:
+    """Run a CLI command's flow inside the app, and turn what it raises into an exit code: 2 for
+    a refusal, with its message, 130 when interrupted."""
+    settings = valid_settings()
 
     async def main() -> int | None:
         async with Bootstrap(settings, console) as app:

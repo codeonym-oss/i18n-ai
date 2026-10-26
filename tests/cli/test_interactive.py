@@ -12,7 +12,7 @@ import pytest
 from keyring.backends import fail
 from typer.testing import CliRunner
 
-from i18n_ai.cli import interactive
+from i18n_ai.cli import interactive, tui
 from i18n_ai.cli.app import app
 from i18n_ai.di import bootstrap
 from support.fakes import FakeGateway, FakeModel, MemoryKeyring, ScriptedPrompter
@@ -68,14 +68,29 @@ def invoke(*args: str) -> tuple[int, str]:
     return result.exit_code, ANSI.sub("", result.output)
 
 
-def test_i18n_ai_alone_walks_every_step(
+def test_i18n_ai_alone_opens_the_tui_at_a_terminal(
+    terminal: Terminal, monkeypatch: pytest.MonkeyPatch, examples: Path
+) -> None:
+    opened: list[Path] = []
+    monkeypatch.setattr(tui, "run_tui", lambda settings, project: opened.append(project))
+    prompter = terminal()
+
+    code, output = invoke()
+
+    assert code == 0, output
+    assert opened == [examples]
+    assert prompter.asked == []
+    assert "Usage" not in output
+
+
+def test_generate_alone_walks_every_step(
     terminal: Terminal, examples: Path, vault: MemoryKeyring
 ) -> None:
     prompter = terminal(
         "i18next/locales", ["fr", "de"], "", "openai", "sk-test", False, "fake-model", True
     )
 
-    code, output = invoke()
+    code, output = invoke("generate")
 
     assert code == 0, output
     asked = [(question.kind, question.message) for question in prompter.asked]

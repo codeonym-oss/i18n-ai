@@ -13,6 +13,7 @@ from .handlers.generate import generate
 from .handlers.presets import presets
 from .handlers.providers import providers
 from .handlers.scan import scan
+from .handlers.tui import tui
 
 app = typer.Typer(
     name="i18n-ai",
@@ -22,6 +23,7 @@ app = typer.Typer(
     ),
     pretty_exceptions_show_locals=False,
 )
+app.command("tui")(tui)
 app.command("scan")(scan)
 app.command("generate")(generate)
 app.command("presets")(presets)
@@ -61,9 +63,10 @@ def root(
             logging.getLogger(noisy).setLevel(logging.WARNING)
 
     if ctx.invoked_subcommand is None:
-        # `i18n-ai` alone: a guided generation at a terminal, the help elsewhere
+        # `i18n-ai` alone: the TUI at a terminal, the help elsewhere
         if interactive.is_interactive(no_input=False):
-            generate()
+            tui()
+            raise typer.Exit()
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
