@@ -1,20 +1,29 @@
 import logging
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from mediary.cqrs import CommandHandler, command_handler
 
-from ......domain.exports.locale import LocaleDocument, LocaleTree, SourceFile, qualify
+from ......domain.exports.locale import (
+    LocaleDocument,
+    LocaleTree,
+    SourceFile,
+    TargetLocation,
+    qualify,
+)
 from ......domain.exports.provider import ProviderNotInstalled
 from .....common.targets import validated_targets
 from .....ports.locale import (
     EngineRequest,
     EngineSettings,
+    FallbackProblem,
     FileClassified,
     FileFailed,
     FileTranslated,
+    IFallbackRecord,
     ILocaleStore,
     ILocaleTreeScanner,
     ITranslationEngine,
+    RecordedFallback,
 )
 from .....ports.progress import IGenerationProgress
 from .....ports.provider import IProviderCatalog
@@ -27,7 +36,8 @@ logger = logging.getLogger(__name__)
 @command_handler
 class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, GenerationReceipt]):
     """Generate the targets: the files that qualify go to the engine, and each translation is
-    written as soon as it comes back, so a long run keeps what it has done."""
+    written as soon as it comes back, so a long run keeps what it has done. The fallbacks are
+    recorded beside the targets, and the next run translates them again."""
 
     def __init__(
         self,
@@ -36,12 +46,14 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
         engine: ITranslationEngine,
         providers: IProviderCatalog,
         progress: IGenerationProgress,
+        fallbacks: IFallbackRecord,
     ) -> None:
         self._scanner = scanner
         self._store = store
         self._engine = engine
         self._providers = providers
         self._progress = progress
+        self._fallbacks = fallbacks
 
     async def handle(self, command: GenerateLocalesCommand) -> GenerationReceipt:
         options = command.options
@@ -71,14 +83,19 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                     )
                 )
 
-        # 3. The existing targets, whose good translations are kept
+        # 3. The existing targets, whose good translations are kept, but for the recorded fallbacks
+        directory = tree.target_directory
+        recorded = await self._fallbacks.read(directory)
         existing: dict[tuple[PurePosixPath, str], LocaleDocument] = {}
         if not options.overwrite:
             for file in qualified:
                 for target in targets:
-                    document = await self._store.read(tree.target_location(target, file))
+                    location = tree.target_location(target, file)
+                    document = await self._store.read(location)
                     if document is not None:
-                        existing[(file.name, target.key)] = document
+                        place = _record_target(directory, location)
+                        paths = [entry.path for entry in recorded if entry.target == place]
+                        existing[(file.name, target.key)] = document.without(paths)
 
         # 4. The engine, writing each file as it is translated
         request = EngineRequest(
@@ -98,6 +115,8 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
             syntax=tree.syntax,
         )
         self._progress.start(len(qualified) * len(targets))
+        written: set[tuple[PurePosixPath, str | None]] = set()
+        entries: list[RecordedFallback] = []
         try:
             async for event in self._engine.run(request):
                 if isinstance(event, FileClassified):
@@ -115,8 +134,16 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                     continue
                 result = await self._settle(tree, event, options.strict)
                 results.append(result)
+                if isinstance(event, FileTranslated) and result.status in _WRITTEN:
+                    location = tree.target_location(event.job.target, event.job.file)
+                    place = _record_target(directory, location)
+                    written.add(place)
+                    entries.extend(_recorded(place, event))
                 self._progress.advance(f"{result.file} → {result.target}: {result.status.value}")
         finally:
+            if written:
+                kept = [entry for entry in recorded if entry.target not in written]
+                await self._fallbacks.write(directory, tuple(kept + entries))
             self._progress.finish()
 
         return GenerationReceipt(model=model.spec, results=tuple(results))
@@ -147,3 +174,32 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
             failures=event.failures,
             warnings=event.warnings,
         )
+
+
+_WRITTEN = (ResultStatus.WRITTEN, ResultStatus.PARTIAL)
+
+
+def _record_target(directory: Path, location: TargetLocation) -> tuple[PurePosixPath, str | None]:
+    """A target in the record: its file, relative to the record's directory, and its key."""
+    return PurePosixPath(location.path.relative_to(directory).as_posix()), location.bundle_key
+
+
+def _recorded(
+    place: tuple[PurePosixPath, str | None], event: FileTranslated
+) -> list[RecordedFallback]:
+    """The fallbacks `event` wrote at `place`, as the record keeps them."""
+    file, key = place
+    return [
+        RecordedFallback(
+            file,
+            key,
+            path,
+            tuple(
+                FallbackProblem(violation.code, violation.message)
+                for violation in event.failures
+                if violation.path == path
+            ),
+            rejected,
+        )
+        for path, rejected in event.rejected.items()
+    ]

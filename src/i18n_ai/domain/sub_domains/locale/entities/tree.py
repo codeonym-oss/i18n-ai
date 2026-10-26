@@ -72,6 +72,13 @@ class LocaleTree:
             return self.files[0].path if self.files else self.root / f"{self.prefix}{self.source}"
         return self.root
 
+    @property
+    def target_directory(self) -> Path:
+        """The directory the targets are written to: `output`, or the bundle file's own."""
+        if self.layout == TreeLayout.BUNDLE and self.output.suffix:
+            return self.output.parent
+        return self.output
+
     def target_location(self, target: LocaleCode, file: SourceFile) -> TargetLocation:
         """Where `target`'s version of `file` goes. A locale that already exists keeps its own
         spelling, so `pt_BR/` is filled though `pt-BR` was asked; a new one is spelled as the

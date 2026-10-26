@@ -62,6 +62,16 @@ Leading and trailing whitespace is copied from the source, whatever the model an
 It keeps its source text, so that its document is whole, and is listed at the end. Such a file is
 **partial**. With `--strict`, a partial file is not written at all, and the run exits with 1.
 
+The run also records it in `.i18n-ai-fallbacks.json`, in the directory the targets are written
+to: the file, the message's key, the rules it broke and the model's last answer. The next run
+translates a recorded message again, rather than keeping its source text as a translation, and
+takes it off the record once it passes. Commit the record with your locales, so that every clone
+and CI run knows which messages are still in their source text. A tree with no fallbacks left has
+no record.
+
+Messages that fell back before the record existed are not in it: `--overwrite` translates them
+again.
+
 ## Existing translations
 
 A target's existing translation is kept when it passes the same rules, and is not sent to the
