@@ -14,10 +14,17 @@ import asyncio
 import logging
 from typing import Any, Literal, TypedDict
 
+from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from ....application.ports.locale import EngineSettings, FileTranslated, TranslationJob
+from ....application.ports.locale import (
+    AtomStarted,
+    AttemptRejected,
+    EngineSettings,
+    FileTranslated,
+    TranslationJob,
+)
 from ....domain.exports.locale import (
     LocaleCode,
     LocaleSchema,
@@ -60,6 +67,7 @@ class AtomState(TypedDict, total=False):
 def build_atom_graph(gateway: ILlmGateway) -> CompiledStateGraph[Any, Any, Any, Any]:
     def extract(state: AtomState) -> AtomState:
         job = state["job"]
+        get_stream_writer()(AtomStarted(job))
         schema = extract_schema(job.document, state["source"], job.target, state["syntax"])
         reused = reusable_translations(schema, job.existing)
         pending = [unit.id for unit in schema.units if unit.id not in reused]
@@ -142,6 +150,10 @@ def build_atom_graph(gateway: ILlmGateway) -> CompiledStateGraph[Any, Any, Any, 
             problems[unit_id] = [violation.message for violation in rejected]
             if text is not None:
                 previous[unit_id] = text
+        attempts = state["settings"].max_attempts
+        if pending and state["attempt"] < attempts:
+            write = get_stream_writer()
+            write(AttemptRejected(state["job"], len(pending), state["attempt"] + 1, attempts))
         return {
             "done": done,
             "warnings": warnings,

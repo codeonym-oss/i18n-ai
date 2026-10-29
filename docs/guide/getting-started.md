@@ -35,10 +35,13 @@ translate, **up to date** when there is nothing to translate, or **off**. `Space
 under the cursor off or on, `r` its whole row (a file), `c` its whole column (a locale). The
 files left out are listed with their reason, and the line under the grid totals what is on.
 
-`Ctrl+R` again runs it: no other question. The run screen shows each file and locale as it is
-done, then the receipt, and the one-line command that repeats the run without the form. A file
-turned off is an `--exclude` in that command, a locale turned off is not among its targets;
-single cells have no option of their own, so the receipt says when the command runs them too.
+`Ctrl+R` again runs it: no other question. The run screen keeps the plan's grid, and each cell
+follows its file and locale live: waiting, translating, **retry 2/3** when the model's answer
+broke a rule and goes back to it, then written, partial (with fallbacks: messages left in their
+source text), failed or ignored. Under it, a bar, and **Problems**: each failed or partial file
+as it comes. Then the receipt, and the one-line command that repeats the run without the form.
+A file turned off is an `--exclude` in that command, a locale turned off is not among its
+targets; single cells have no option of their own, so the receipt says when the command runs them too.
 `b` goes back, `q` quits, `Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.
 
 ### The prompts

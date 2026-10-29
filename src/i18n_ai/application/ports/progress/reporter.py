@@ -1,22 +1,13 @@
 from abc import ABC, abstractmethod
 
+from .events import ProgressEvent
+
 
 class IGenerationProgress(ABC):
-    """Shows a generation as it goes: the jobs (a file into a target) planned, those dropped
-    when their file does not qualify, and those done."""
+    """Shows a generation as it goes, one event at a time: the jobs (a file into a target)
+    planned, each started, retried and done, the files dropped when they do not qualify, and the
+    end."""
 
     @abstractmethod
-    def start(self, jobs: int) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def drop(self, jobs: int, reason: str) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def advance(self, description: str) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def finish(self) -> None:
+    def on(self, event: ProgressEvent) -> None:
         raise NotImplementedError

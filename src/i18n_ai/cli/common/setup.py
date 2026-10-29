@@ -161,11 +161,12 @@ def answers_of(
 @dataclass(frozen=True)
 class Planned:
     """A run's targets, files left out and single (file, target) pairs skipped, from a plan's
-    cells turned off."""
+    cells turned off, which are kept as `off`."""
 
     targets: tuple[LocaleCode, ...]
     exclude: tuple[str, ...]
     skip: frozenset[tuple[PurePosixPath, LocaleCode]]
+    off: frozenset[tuple[str, str]] = frozenset()
 
 
 def planned(
@@ -184,7 +185,7 @@ def planned(
         for target in kept
         if (file, target.value) in off
     )
-    return Planned(kept, tuple(_literal(file) for file in gone), skip)
+    return Planned(kept, tuple(_literal(file) for file in gone), skip, frozenset(off))
 
 
 def command_line(

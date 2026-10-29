@@ -1,12 +1,12 @@
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import DataTable, Footer, Header, Static
-from textual.widgets.data_table import CellKey
+from textual.widgets import Footer, Header, Static
 
 from ...application.exports.locale import ScanReport, TargetFileView
 from ...domain.exports.locale import LocaleCode
 from ..common.setup import Planned, planned
+from .grid import JobGrid
 
 
 class PlanScreen(Screen[Planned | None]):
@@ -39,7 +39,7 @@ class PlanScreen(Screen[Planned | None]):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield DataTable(id="grid", cursor_type="cell")
+        yield JobGrid(self._files, self._targets, self._label, id="grid")
         yield Static(
             "\n".join(f"Left out: {file.name} — {file.reason}" for file in self._left_out),
             id="left-out",
@@ -48,12 +48,6 @@ class PlanScreen(Screen[Planned | None]):
         yield Footer()
 
     def on_mount(self) -> None:
-        grid = self.query_one(DataTable)
-        grid.add_column("File", key="")
-        for locale in self._targets:
-            grid.add_column(locale, key=locale)
-        for file in self._files:
-            grid.add_row(file, *(self._label(file, locale) for locale in self._targets), key=file)
         self.query_one("#left-out").display = bool(self._left_out)
         self._total()
 
@@ -72,38 +66,29 @@ class PlanScreen(Screen[Planned | None]):
             f"{count(len(on), 'agent')} · {count(messages, 'message')}"
         )
 
-    def _cursor(self) -> tuple[str, str] | None:
-        """The file and locale under the cursor; the locale is empty in the File column. None
-        when no file qualifies."""
-        grid = self.query_one(DataTable)
-        if not grid.row_count:
-            return None
-        key: CellKey = grid.coordinate_to_cell_key(grid.cursor_coordinate)
-        return str(key.row_key.value), str(key.column_key.value)
-
     def _toggle(self, pairs: list[tuple[str, str]]) -> None:
         """All of `pairs` off, or all on again when they are all off already."""
         if all(pair in self._off for pair in pairs):
             self._off.difference_update(pairs)
         else:
             self._off.update(pairs)
-        grid = self.query_one(DataTable)
+        grid = self.query_one(JobGrid)
         for file, locale in pairs:
-            grid.update_cell(file, locale, self._label(file, locale))
+            grid.show(file, locale, self._label(file, locale))
         self._total()
 
     def action_cell(self) -> None:
-        cursor = self._cursor()
+        cursor = self.query_one(JobGrid).under_cursor()
         if cursor is not None and cursor[1]:
             self._toggle([cursor])
 
     def action_row(self) -> None:
-        cursor = self._cursor()
+        cursor = self.query_one(JobGrid).under_cursor()
         if cursor is not None:
             self._toggle([(cursor[0], locale) for locale in self._targets])
 
     def action_column(self) -> None:
-        cursor = self._cursor()
+        cursor = self.query_one(JobGrid).under_cursor()
         if cursor is not None and cursor[1]:
             self._toggle([(file, cursor[1]) for file in self._files])
 

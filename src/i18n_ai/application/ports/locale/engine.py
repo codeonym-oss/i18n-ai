@@ -93,7 +93,25 @@ class FileFailed:
     error: str
 
 
-EngineEvent = FileClassified | FileTranslated | FileFailed
+@dataclass(frozen=True)
+class AtomStarted:
+    """A file's translation into a target has started."""
+
+    job: TranslationJob
+
+
+@dataclass(frozen=True)
+class AttemptRejected:
+    """`messages` of a file's translation into a target broke the rules, and are sent back:
+    `attempt` of `attempts` comes next."""
+
+    job: TranslationJob
+    messages: int
+    attempt: int
+    attempts: int
+
+
+EngineEvent = FileClassified | AtomStarted | AttemptRejected | FileTranslated | FileFailed
 
 
 class ITranslationEngine(ABC):
@@ -102,6 +120,7 @@ class ITranslationEngine(ABC):
 
     @abstractmethod
     def run(self, request: EngineRequest) -> AsyncIterator[EngineEvent]:
-        """The events, as they happen: a `FileClassified` for each file, then a
-        `FileTranslated` or a `FileFailed` for each qualifying file and target."""
+        """The events, as they happen: a `FileClassified` for each file, then for each
+        qualifying file and target an `AtomStarted`, an `AttemptRejected` for each retry, and a
+        `FileTranslated` or a `FileFailed`."""
         raise NotImplementedError
