@@ -10,8 +10,9 @@ terminal, opens the TUI, as `i18n-ai tui` does. Elsewhere it shows this help.
 ## `i18n-ai tui`
 
 A full-screen form for a generation: the tree, its targets and where they go, the provider, its
-model and key. `Ctrl+R` runs it, then shows its receipt and the `generate` command that repeats
-it; `b` goes back to the form, `q` quits, `Ctrl+P` opens the command palette. See
+model and key. `Ctrl+R` plans it: each file in each locale, a cell, a row or a column of which
+turns off (`Space`, `r`, `c`). `Ctrl+R` again runs it, then shows its receipt and the `generate`
+command that repeats it; `b` goes back, `q` quits, `Ctrl+P` opens the command palette. See
 [Getting started](../guide/getting-started.md).
 
 ## `i18n-ai scan [PATH]`

@@ -23,12 +23,23 @@ checked; type to search), lists the providers with the ones ready to use first, 
 chosen provider's model list from its API, the recommended models first. A field waits until
 what it depends on is set: the model for its provider, the targets for their tree. A missing API
 key is asked for, hidden, and used for that run; it is saved in the system keyring only if you
-tick the box. The line beside **Run** says how many files and locales the run covers.
+tick the box. The line beside **Plan** says how many files and locales the run covers.
 
-`Ctrl+R` runs it: no other question, except to install the provider's package when it is
-missing. The run screen shows each file and locale as it is done, then the receipt, and the
-one-line command that repeats the run without the form. `b` goes back to the form, `q` quits,
-`Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.
+`Ctrl+R` plans it, after asking to install the provider's package if it is missing. The plan
+shows each file in each locale, before anything is sent to a model:
+
+![The plan of a run, one cell turned off](tui-plan.svg)
+
+A cell is **new** (no target file yet) or **fill** (a target exists) with the messages it will
+translate, **up to date** when there is nothing to translate, or **off**. `Space` turns the cell
+under the cursor off or on, `r` its whole row (a file), `c` its whole column (a locale). The
+files left out are listed with their reason, and the line under the grid totals what is on.
+
+`Ctrl+R` again runs it: no other question. The run screen shows each file and locale as it is
+done, then the receipt, and the one-line command that repeats the run without the form. A file
+turned off is an `--exclude` in that command, a locale turned off is not among its targets;
+single cells have no option of their own, so the receipt says when the command runs them too.
+`b` goes back, `q` quits, `Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.
 
 ### The prompts
 

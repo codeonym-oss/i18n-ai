@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 
 from mediary.cqrs import Command, command
 
@@ -33,9 +34,11 @@ class GenerationOptions:
 class GenerateLocalesCommand(Command[GenerationReceipt]):
     """Generate the `targets` of a locale tree from its source with `model`, and write them.
     Raises `LocaleTreeNotFound`, `SourceLocaleUnknown`, `MixedLocaleFormats`, `TargetIsSource`,
-    `ProviderUnknown`, or `ProviderNotInstalled` (see `InstallProviderCommand`)."""
+    `ProviderUnknown`, or `ProviderNotInstalled` (see `InstallProviderCommand`). `skip` holds
+    the (file name, target) pairs left out: they are not translated, and not in the receipt."""
 
     tree: TreeRequest
     targets: tuple[LocaleCode, ...]
     model: ModelSpec
     options: GenerationOptions = GenerationOptions()
+    skip: frozenset[tuple[PurePosixPath, LocaleCode]] = frozenset()

@@ -48,7 +48,8 @@ class TranslationJob:
 @dataclass(frozen=True)
 class EngineRequest:
     """The source files to translate into each target. `existing` maps a file's name and a
-    target's key to the target's current document; `syntax` is the tree's messages'."""
+    target's key to the target's current document; `syntax` is the tree's messages'. `skip`
+    holds the (file name, target key) pairs that get no job."""
 
     source: LocaleCode
     files: tuple[SourceFile, ...]
@@ -56,6 +57,7 @@ class EngineRequest:
     existing: Mapping[tuple[PurePosixPath, str], LocaleDocument]
     settings: EngineSettings
     syntax: MessageSyntax = MessageSyntax.STANDARD
+    skip: frozenset[tuple[PurePosixPath, str]] = frozenset()
 
 
 @dataclass(frozen=True)

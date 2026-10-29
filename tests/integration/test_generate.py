@@ -1,6 +1,6 @@
 import json
 from collections.abc import AsyncIterator
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from mediary import Mediator
@@ -406,14 +406,22 @@ async def test_a_laravel_tree_with_its_source_takes_the_target_s_forms(
 
 
 async def generate(
-    gateway: FakeGateway, tree: TreeRequest, *targets: str, **options: object
+    gateway: FakeGateway,
+    tree: TreeRequest,
+    *targets: str,
+    skip: frozenset[tuple[PurePosixPath, LocaleCode]] = frozenset(),
+    **options: object,
 ) -> list:  # type: ignore[type-arg]
     container = build_container(build_mediator(), Console(quiet=True), FakeModel(gateway))
     async with container() as request:
         mediator = await request.get(Mediator)
         receipt = await mediator.send(
             GenerateLocalesCommand(
-                tree, codes(*targets), MODEL, GenerationOptions(max_attempts=2, **options)
+                tree,
+                codes(*targets),
+                MODEL,
+                GenerationOptions(max_attempts=2, **options),
+                skip=skip,
             )
         )
     await container.close()
@@ -513,3 +521,58 @@ async def test_a_laravel_fallback_is_translated_again_from_its_key(examples: Pat
 
     assert read(lang / "de.json")["Welcome, :name!"] == "[de] Welcome, :name!"
     assert not (lang / ".i18n-ai-fallbacks.json").exists()
+
+
+def skipped(*pairs: tuple[str, str]) -> frozenset[tuple[PurePosixPath, LocaleCode]]:
+    return frozenset((PurePosixPath(file), LocaleCode(target)) for file, target in pairs)
+
+
+async def test_a_skipped_pair_is_never_translated(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    gateway = FakeGateway()
+
+    results = await generate(
+        gateway, TreeRequest(locales / "en"), "es", "de", skip=skipped(("common.json", "de"))
+    )
+
+    sent = {(batch.file, batch.schema.target.value) for batch in gateway.batches}
+    assert ("common.json", "de") not in sent
+    assert {("common.json", "es"), ("auth/login.json", "es"), ("auth/login.json", "de")} <= sent
+    rows = {(r.file, r.target): r.status for r in results if r.target is not None}
+    assert set(rows) == {
+        ("common.json", "es"),
+        ("auth/login.json", "es"),
+        ("auth/login.json", "de"),
+    }
+    assert set(rows.values()) == {ResultStatus.WRITTEN}
+    assert not (locales / "de" / "common.json").exists()
+    assert (locales / "de" / "auth" / "login.json").is_file()
+
+
+async def test_a_file_with_every_target_skipped_is_left_alone(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    gateway = FakeGateway()
+
+    results = await generate(
+        gateway,
+        TreeRequest(locales / "en"),
+        "es",
+        "de",
+        skip=skipped(("common.json", "es"), ("common.json", "de")),
+    )
+
+    assert "common.json" not in gateway.classified
+    assert "common.json" not in {r.file for r in results}
+    assert not (locales / "es" / "common.json").exists()
+
+
+async def test_the_precheck_counts_a_recorded_fallback_as_to_translate(
+    mediator: Mediator, examples: Path
+) -> None:
+    tree = TreeRequest(examples / "i18next" / "locales" / "en", include=("common.json",))
+    await generate(Stubborn(), tree, "it")
+
+    report = await mediator.send(ScanLocaleTreeQuery(tree, codes("it")))
+
+    (file,) = report.targets[0].files
+    assert (file.to_translate, file.exists) == (1, True)

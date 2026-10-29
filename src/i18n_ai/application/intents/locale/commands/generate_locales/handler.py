@@ -1,17 +1,17 @@
 import logging
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 
 from mediary.cqrs import CommandHandler, command_handler
 
 from ......domain.exports.locale import (
+    LocaleCode,
     LocaleDocument,
     LocaleTree,
     SourceFile,
-    TargetLocation,
     qualify,
 )
 from ......domain.exports.provider import ProviderNotInstalled
-from .....common.targets import validated_targets
+from .....common import record_target, recorded_paths, validated_targets
 from .....ports.locale import (
     EngineRequest,
     EngineSettings,
@@ -63,15 +63,21 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
         if not self._providers.is_installed(model.module):
             raise ProviderNotInstalled(model.provider, model.package)
 
-        # 2. The tree, its targets, and the files that qualify
+        # 2. The tree, its targets, and the files that qualify, but for those every target skips
         tree = await self._scanner.scan(command.tree)
         targets = validated_targets(tree, command.targets)
+        skip = frozenset((file, target.key) for file, target in command.skip)
+
+        def wanted(file: SourceFile) -> list[LocaleCode]:
+            return [target for target in targets if (file.name, target.key) not in skip]
+
         results: list[FileResult] = []
         qualified: list[SourceFile] = []
         for file in tree.files:
             qualification = qualify(file.document, file.error)
             if qualification.qualifies:
-                qualified.append(file)
+                if wanted(file):
+                    qualified.append(file)
             else:
                 results.append(
                     FileResult(
@@ -89,13 +95,14 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
         existing: dict[tuple[PurePosixPath, str], LocaleDocument] = {}
         if not options.overwrite:
             for file in qualified:
-                for target in targets:
+                for target in wanted(file):
                     location = tree.target_location(target, file)
                     document = await self._store.read(location)
                     if document is not None:
-                        place = _record_target(directory, location)
-                        paths = [entry.path for entry in recorded if entry.target == place]
-                        existing[(file.name, target.key)] = document.without(paths)
+                        place = record_target(directory, location)
+                        existing[(file.name, target.key)] = document.without(
+                            recorded_paths(recorded, place)
+                        )
 
         # 4. The engine, writing each file as it is translated
         request = EngineRequest(
@@ -113,15 +120,18 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                 temperature=options.temperature,
             ),
             syntax=tree.syntax,
+            skip=skip,
         )
-        self._progress.start(len(qualified) * len(targets))
+        self._progress.start(sum(len(wanted(file)) for file in qualified))
         written: set[tuple[PurePosixPath, str | None]] = set()
         entries: list[RecordedFallback] = []
         try:
             async for event in self._engine.run(request):
                 if isinstance(event, FileClassified):
                     if not event.qualifies:
-                        self._progress.drop(len(targets), f"{event.file.name}: {event.reason}")
+                        self._progress.drop(
+                            len(wanted(event.file)), f"{event.file.name}: {event.reason}"
+                        )
                         results.append(
                             FileResult(
                                 str(event.file.name),
@@ -136,7 +146,7 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                 results.append(result)
                 if isinstance(event, FileTranslated) and result.status in _WRITTEN:
                     location = tree.target_location(event.job.target, event.job.file)
-                    place = _record_target(directory, location)
+                    place = record_target(directory, location)
                     written.add(place)
                     entries.extend(_recorded(place, event))
                 self._progress.advance(f"{result.file} → {result.target}: {result.status.value}")
@@ -177,11 +187,6 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
 
 
 _WRITTEN = (ResultStatus.WRITTEN, ResultStatus.PARTIAL)
-
-
-def _record_target(directory: Path, location: TargetLocation) -> tuple[PurePosixPath, str | None]:
-    """A target in the record: its file, relative to the record's directory, and its key."""
-    return PurePosixPath(location.path.relative_to(directory).as_posix()), location.bundle_key
 
 
 def _recorded(

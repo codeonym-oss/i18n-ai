@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from mediary import Mediator
@@ -62,3 +62,23 @@ async def test_a_run_shows_on_the_progress_it_is_given(examples: Path) -> None:
     assert progress.seen[0].startswith("start ")
     assert "advance" in progress.seen
     assert progress.seen[-1] == "finish"
+
+
+async def test_the_progress_counts_the_jobs_a_skip_leaves(examples: Path) -> None:
+    progress = RecordingProgress()
+    settings = Settings(generation=GenerationConfig())
+    tree = TreeRequest(examples / "i18next" / "locales" / "en")
+    skip = frozenset({(PurePosixPath("common.json"), LocaleCode("de"))})
+
+    async with Bootstrap(settings, Console(quiet=True), progress=progress) as app:
+        await app.mediator.send(
+            GenerateLocalesCommand(
+                tree,
+                (LocaleCode("fr"), LocaleCode("de")),
+                ModelSpec("openai:fake-model"),
+                skip=skip,
+            )
+        )
+
+    assert progress.seen[0] == "start 3"
+    assert progress.seen.count("advance") == 3
