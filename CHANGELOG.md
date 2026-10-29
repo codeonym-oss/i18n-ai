@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.3.0...v0.4.0) (2026-10-29)
+
+
+### Features
+
+* open a full-screen TUI by default, starting with its setup screen ([#30](https://github.com/codeonym-oss/i18n-ai/issues/30)) ([#37](https://github.com/codeonym-oss/i18n-ai/issues/37)) ([3d271ba](https://github.com/codeonym-oss/i18n-ai/commit/3d271ba6067ad4922021133cbeb84665eea51756))
+* plan a TUI run as a files × locales grid, with single cells turned off ([#31](https://github.com/codeonym-oss/i18n-ai/issues/31)) ([#38](https://github.com/codeonym-oss/i18n-ai/issues/38)) ([a1ec720](https://github.com/codeonym-oss/i18n-ai/commit/a1ec720318b276096882b3452d916c4aaf04d8ea))
+* record the fallbacks, and translate them again ([#29](https://github.com/codeonym-oss/i18n-ai/issues/29)) ([#35](https://github.com/codeonym-oss/i18n-ai/issues/35)) ([8287930](https://github.com/codeonym-oss/i18n-ai/commit/82879300abfa327445ab8bfd7e317678ec39c2b5))
+* watch a TUI run live, retries and failures included ([#32](https://github.com/codeonym-oss/i18n-ai/issues/32)) ([#39](https://github.com/codeonym-oss/i18n-ai/issues/39)) ([a9fc741](https://github.com/codeonym-oss/i18n-ai/commit/a9fc7418eec2f5d78d664041538401801fba29c6))
+
 ## [0.3.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.2.0...v0.3.0) (2026-10-23)
 
 
