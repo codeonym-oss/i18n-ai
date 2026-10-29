@@ -412,7 +412,7 @@ class SetupScreen(Screen[None]):
             return
         request = dataclasses.replace(request, exclude=request.exclude + plan.exclude)
 
-        screen = RunScreen()
+        screen = RunScreen(report, plan)
         await self.app.push_screen(screen)
         self._progress.target = screen
         command = GenerateLocalesCommand(

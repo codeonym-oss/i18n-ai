@@ -1,4 +1,6 @@
 from .engine import (
+    AtomStarted,
+    AttemptRejected,
     EngineEvent,
     EngineRequest,
     EngineSettings,
@@ -14,6 +16,8 @@ from .scanner import ILocaleTreeScanner, TreeCandidate, TreeRequest
 from .store import ILocaleStore
 
 __all__ = [
+    "AtomStarted",
+    "AttemptRejected",
     "EngineEvent",
     "EngineRequest",
     "EngineSettings",

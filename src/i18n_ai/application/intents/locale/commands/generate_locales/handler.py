@@ -13,6 +13,8 @@ from ......domain.exports.locale import (
 from ......domain.exports.provider import ProviderNotInstalled
 from .....common import record_target, recorded_paths, validated_targets
 from .....ports.locale import (
+    AtomStarted,
+    AttemptRejected,
     EngineRequest,
     EngineSettings,
     FallbackProblem,
@@ -25,10 +27,20 @@ from .....ports.locale import (
     ITranslationEngine,
     RecordedFallback,
 )
-from .....ports.progress import IGenerationProgress
+from .....ports.progress import (
+    FileDropped,
+    FileResult,
+    IGenerationProgress,
+    JobDone,
+    JobRetrying,
+    JobStarted,
+    ResultStatus,
+    RunFinished,
+    RunStarted,
+)
 from .....ports.provider import IProviderCatalog
 from .cmd import GenerateLocalesCommand
-from .receipt import FileResult, GenerationReceipt, ResultStatus
+from .receipt import GenerationReceipt
 
 logger = logging.getLogger(__name__)
 
@@ -122,15 +134,15 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
             syntax=tree.syntax,
             skip=skip,
         )
-        self._progress.start(sum(len(wanted(file)) for file in qualified))
+        self._progress.on(RunStarted(sum(len(wanted(file)) for file in qualified)))
         written: set[tuple[PurePosixPath, str | None]] = set()
         entries: list[RecordedFallback] = []
         try:
             async for event in self._engine.run(request):
                 if isinstance(event, FileClassified):
                     if not event.qualifies:
-                        self._progress.drop(
-                            len(wanted(event.file)), f"{event.file.name}: {event.reason}"
+                        self._progress.on(
+                            FileDropped(str(event.file.name), len(wanted(event.file)), event.reason)
                         )
                         results.append(
                             FileResult(
@@ -142,6 +154,22 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                             )
                         )
                     continue
+                if isinstance(event, AtomStarted):
+                    job = event.job
+                    self._progress.on(JobStarted(str(job.file.name), job.target.value))
+                    continue
+                if isinstance(event, AttemptRejected):
+                    job = event.job
+                    self._progress.on(
+                        JobRetrying(
+                            str(job.file.name),
+                            job.target.value,
+                            event.messages,
+                            event.attempt,
+                            event.attempts,
+                        )
+                    )
+                    continue
                 result = await self._settle(tree, event, options.strict)
                 results.append(result)
                 if isinstance(event, FileTranslated) and result.status in _WRITTEN:
@@ -149,12 +177,12 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                     place = record_target(directory, location)
                     written.add(place)
                     entries.extend(_recorded(place, event))
-                self._progress.advance(f"{result.file} → {result.target}: {result.status.value}")
+                self._progress.on(JobDone(result))
         finally:
             if written:
                 kept = [entry for entry in recorded if entry.target not in written]
                 await self._fallbacks.write(directory, tuple(kept + entries))
-            self._progress.finish()
+            self._progress.on(RunFinished())
 
         return GenerationReceipt(model=model.spec, results=tuple(results))
 

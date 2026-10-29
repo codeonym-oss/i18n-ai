@@ -12,6 +12,7 @@ from dishka import Provider, Scope, provide
 from keyring.backend import KeyringBackend
 from keyring.errors import PasswordDeleteError
 
+from i18n_ai.application.exports.locale import ProgressEvent
 from i18n_ai.application.ports.locale import ITranslationEngine
 from i18n_ai.application.ports.progress import IGenerationProgress
 from i18n_ai.application.ports.provider import (
@@ -115,10 +116,7 @@ class MemoryKeyring(KeyringBackend):
 
 
 class SilentProgress(IGenerationProgress):
-    def start(self, jobs: int) -> None: ...
-    def drop(self, jobs: int, reason: str) -> None: ...
-    def advance(self, description: str) -> None: ...
-    def finish(self) -> None: ...
+    def on(self, event: ProgressEvent) -> None: ...
 
 
 class FakeModel(Provider):
