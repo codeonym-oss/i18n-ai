@@ -1,6 +1,6 @@
 [project]
 name = "i18n-ai"
-version = "0.3.0"
+version = "0.4.0"
 description = "Generate a website's locales from its source locale tree, with LLM agents that keep every placeholder intact."
 readme = "README.md"
 license = "MIT"
