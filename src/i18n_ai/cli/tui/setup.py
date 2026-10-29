@@ -58,6 +58,7 @@ from ..common.setup import (
     within,
 )
 from .confirm import ConfirmScreen
+from .plan import PlanScreen, count
 from .progress import TuiProgress
 from .run import RunScreen
 
@@ -68,7 +69,7 @@ REFUSALS = (DomainException, ApplicationException, InfraException)
 class SetupScreen(Screen[None]):
     """A generation set up as one form: the tree, its source and targets, where they go; the
     provider, its model and key. A field waits until what it depends on is set; the line beside
-    Run says how many files and locales the run covers."""
+    Plan says how many files and locales the run covers."""
 
     DEFAULT_CSS = """
     SetupScreen #form { padding: 0 1; }
@@ -80,7 +81,7 @@ class SetupScreen(Screen[None]):
     SetupScreen #go { height: auto; margin-top: 1; }
     SetupScreen #plan { padding-left: 2; color: $text-muted; }
     """
-    BINDINGS = [Binding("ctrl+r", "run", "Run")]
+    BINDINGS = [Binding("ctrl+r", "plan", "Plan")]
 
     def __init__(
         self,
@@ -149,7 +150,7 @@ class SetupScreen(Screen[None]):
                 id="key-row",
             )
             with Horizontal(id="go"):
-                yield Button("Run", id="run", variant="primary", compact=True)
+                yield Button("Plan", id="next", variant="primary", compact=True)
                 yield Static("", id="plan")
         yield Footer()
 
@@ -292,7 +293,7 @@ class SetupScreen(Screen[None]):
             plan.update(error.message)
             return
         plan.update(
-            f"{_count(len(report.qualified), 'file')} · {_count(len(report.targets), 'locale')}"
+            f"{count(len(report.qualified), 'file')} · {count(len(report.targets), 'locale')}"
         )
 
     @on(Select.Changed, "#provider")
@@ -367,14 +368,14 @@ class SetupScreen(Screen[None]):
         self._show_key(self._providers[provider])
         await self._list_models(provider)
 
-    @on(Button.Pressed, "#run")
-    def action_run(self) -> None:
+    @on(Button.Pressed, "#next")
+    def action_plan(self) -> None:
         self._run()
 
     @work(exclusive=True, group="run")
     async def _run(self) -> None:
-        """No confirmation: the form says what will happen. Only a missing provider package is
-        asked about, before it is installed."""
+        """The plan, then the run. A missing provider package is asked about first, before it
+        is installed; the plan's Run is the go-ahead."""
         request, targets = self._request, self._picked_targets()
         provider = self.query_one("#provider", Select).value
         model = self.query_one("#model", Select).value
@@ -401,16 +402,25 @@ class SetupScreen(Screen[None]):
                 self.notify(f"Installing {status.package}…")
                 installed = await self._mediator.send(InstallProviderCommand(status.provider))
                 self.notify(f"{installed.package} installed.")
+            save_answers(self._project, answers_of(request, targets, spec, self._shown))
+            report = await self._mediator.send(ScanLocaleTreeQuery(request, targets))
         except REFUSALS as error:
             self.notify(error.message, severity="error")
             return
-        save_answers(self._project, answers_of(request, targets, spec, self._shown))
+        plan = await self.app.push_screen_wait(PlanScreen(report))
+        if plan is None:
+            return
+        request = dataclasses.replace(request, exclude=request.exclude + plan.exclude)
 
         screen = RunScreen()
         await self.app.push_screen(screen)
         self._progress.target = screen
         command = GenerateLocalesCommand(
-            request, targets, ModelSpec(spec), generation_options(self._settings)
+            request,
+            plan.targets,
+            ModelSpec(spec),
+            generation_options(self._settings),
+            skip=plan.skip,
         )
         try:
             receipt = await self._mediator.send(command)
@@ -420,8 +430,16 @@ class SetupScreen(Screen[None]):
         finally:
             self._progress.target = None
         output = self._shown(request.output) if request.output else None
-        again = command_line(self._shown(request.path), targets, spec, request.source, output, [])
-        screen.show_receipt(receipt, again)
+        flags = [word for pattern in plan.exclude for word in ("--exclude", pattern)]
+        again = command_line(
+            self._shown(request.path), plan.targets, spec, request.source, output, flags
+        )
+        one = len(plan.skip) == 1
+        note = (
+            f"{count(len(plan.skip), 'single cell')} {'was' if one else 'were'} off; "
+            f"this command runs {'it' if one else 'them'} too."
+        )
+        screen.show_receipt(receipt, again, note if plan.skip else None)
 
 
 def _row(
@@ -437,7 +455,3 @@ def _fill(select: Select[str], choices: list[Choice], default: str | None) -> No
     select.set_options((choice.title, choice.value) for choice in choices)
     if default is not None and any(choice.value == default for choice in choices):
         select.value = default
-
-
-def _count(number: int, noun: str) -> str:
-    return f"{number} {noun}" if number == 1 else f"{number} {noun}s"

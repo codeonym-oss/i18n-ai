@@ -15,8 +15,8 @@ i18n-ai generate locales/en -t fr,de,ar -m openai:gpt-4.1-mini -c "A dental clin
 
 - **Asks for what is missing.** Run `i18n-ai` alone for a full-screen form: it finds the locale
   trees in the project, offers CLDR's locales to pick, lists the providers and each one's models
-  from its API, and asks for a missing API key, hidden. It ends with the command that repeats
-  the run, for CI.
+  from its API, and asks for a missing API key, hidden. Its plan shows each file in each locale,
+  any of which you can turn off, and it ends with the command that repeats the run, for CI.
 - **Knows your framework.** i18next, next-intl, FormatJS, vue-i18n, Nuxt, Angular, Transloco,
   ngx-translate, svelte-i18n, Paraglide, Rails, Django and Flutter are detected from the
   project's manifests and config (`package.json`, `Gemfile`, `pubspec.yaml`, `angular.json`,
@@ -62,7 +62,7 @@ i18n-ai auth logout openai       # or --all
 ## Usage
 
 ```sh
-i18n-ai                                          # the TUI: a form, run, and the receipt
+i18n-ai                                          # the TUI: a form, a plan, the run, its receipt
 i18n-ai generate                                 # the prompts: asks for what it needs
 i18n-ai scan -t fr,ar                            # the precheck alone, in the preset's tree
 i18n-ai scan locales/en -t fr,ar                 # or in the one named

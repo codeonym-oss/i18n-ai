@@ -99,6 +99,8 @@ def build_run_graph(gateway: ILlmGateway) -> CompiledStateGraph[Any, Any, Any, A
             if not event.qualifies or event.file.document is None:
                 continue
             for target in request.targets:
+                if (event.file.name, target.key) in request.skip:
+                    continue
                 existing = request.existing.get((event.file.name, target.key))
                 job = TranslationJob(event.file, event.file.document, target, existing)
                 sends.append(

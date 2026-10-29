@@ -5,7 +5,7 @@ locales, the providers and their models), with the last answers in this project 
 import shlex
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from ...application.exports.locale import (
     GenerationOptions,
@@ -158,6 +158,35 @@ def answers_of(
     )
 
 
+@dataclass(frozen=True)
+class Planned:
+    """A run's targets, files left out and single (file, target) pairs skipped, from a plan's
+    cells turned off."""
+
+    targets: tuple[LocaleCode, ...]
+    exclude: tuple[str, ...]
+    skip: frozenset[tuple[PurePosixPath, LocaleCode]]
+
+
+def planned(
+    files: Sequence[str], targets: Sequence[LocaleCode], off: set[tuple[str, str]]
+) -> Planned:
+    """A target whose every cell is `off` leaves the targets, a file whose every cell is off is
+    excluded, and the other cells off are skipped. `off` holds (file name, locale) pairs."""
+    kept = tuple(
+        target for target in targets if any((file, target.value) not in off for file in files)
+    )
+    gone = [file for file in files if all((file, target.value) in off for target in targets)]
+    skip = frozenset(
+        (PurePosixPath(file), target)
+        for file in files
+        if file not in gone
+        for target in kept
+        if (file, target.value) in off
+    )
+    return Planned(kept, tuple(_literal(file) for file in gone), skip)
+
+
 def command_line(
     path: str,
     targets: tuple[LocaleCode, ...],
@@ -175,6 +204,11 @@ def command_line(
     if model is not None:
         words += ["-m", model]
     return shlex.join([*words, *flags])
+
+
+def _literal(name: str) -> str:
+    """A glob that matches `name` alone."""
+    return "".join(f"[{char}]" if char in "*?[" else char for char in name)
 
 
 def _title(locale: LocaleCode) -> str:

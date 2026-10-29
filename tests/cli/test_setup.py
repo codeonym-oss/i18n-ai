@@ -1,4 +1,5 @@
-from pathlib import Path
+import fnmatch
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import pytest
@@ -18,6 +19,7 @@ from i18n_ai.cli.common.setup import (
     locale_choices,
     model_choices,
     output_choices,
+    planned,
     provider_choices,
     tree_choices,
 )
@@ -145,3 +147,36 @@ def test_the_answers_are_what_was_picked() -> None:
     answers = answers_of(tree, (LocaleCode("fr"), LocaleCode("de")), "openai:gpt-4.1", shown)
 
     assert answers == Answers("lang", "en", ["fr", "de"], "out", "openai:gpt-4.1")
+
+
+FILES = ("common.json", "auth/login.json")
+FR_DE = (LocaleCode("fr"), LocaleCode("de"))
+
+
+def test_a_column_off_leaves_the_targets() -> None:
+    plan = planned(FILES, FR_DE, {("common.json", "de"), ("auth/login.json", "de")})
+
+    assert (plan.targets, plan.exclude, plan.skip) == ((LocaleCode("fr"),), (), frozenset())
+
+
+def test_a_row_off_is_excluded() -> None:
+    plan = planned(FILES, FR_DE, {("common.json", "fr"), ("common.json", "de")})
+
+    assert (plan.targets, plan.exclude, plan.skip) == (FR_DE, ("common.json",), frozenset())
+
+
+def test_a_single_cell_off_is_skipped() -> None:
+    plan = planned(FILES, FR_DE, {("auth/login.json", "de")})
+
+    assert plan.targets == FR_DE
+    assert plan.exclude == ()
+    assert plan.skip == frozenset({(PurePosixPath("auth/login.json"), LocaleCode("de"))})
+
+
+def test_an_excluded_name_matches_only_itself() -> None:
+    (pattern,) = planned(
+        ("a[1]*.json",), FR_DE, {("a[1]*.json", "fr"), ("a[1]*.json", "de")}
+    ).exclude
+
+    assert fnmatch.fnmatch("a[1]*.json", pattern)
+    assert not fnmatch.fnmatch("a1x.json", pattern)

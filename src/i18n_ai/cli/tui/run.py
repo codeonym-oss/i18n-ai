@@ -47,12 +47,15 @@ class RunScreen(Screen[None]):
         self.query_one(ProgressBar).advance(1)
         self.query_one(Log).write_line(message.description)
 
-    def show_receipt(self, receipt: GenerationReceipt, again: str) -> None:
-        """The table the CLI prints, and the command that runs it again without the TUI."""
+    def show_receipt(self, receipt: GenerationReceipt, again: str, note: str | None = None) -> None:
+        """The table the CLI prints, and the command that runs it again without the TUI, with
+        `note` saying where it differs from the run."""
         console = Console(width=max(self.app.size.width - 2, 60), highlight=False)
         with console.capture() as capture:
             render_receipt(console, receipt)
             console.print(f"\nTo run it again: [bold]{again}[/]")
+            if note is not None:
+                console.print(note)
         self._end(Text.from_ansi(capture.get()))
 
     def stopped(self, reason: str) -> None:
