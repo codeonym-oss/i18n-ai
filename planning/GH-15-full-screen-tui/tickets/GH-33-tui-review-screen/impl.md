@@ -34,11 +34,27 @@ Shared by the three commands and the query (in `application/ports/locale/fallbac
 ```python
 @dataclass(frozen=True)
 class MessageRef:
-    """A message of a target: the source file it is translated from, the target, and its path there."""
+    """A message of a target: its source file, the target, and its path there."""
+
     file: PurePosixPath
     target: LocaleCode
     path: KeyPath
 ```
+
+## Corrections while building
+
+- **Step 1:** `with_value` makes a missing object on the way (a hand-edited target can lack one) and raises
+  `ValueError` when the path cannot hold a value; an array's item must be there.
+- **Step 3:** `FallbackView` holds the `entry: RecordedFallback` itself (its file, key, path, problems and rejected
+  text), then `ref`, `source`, `current` and a `stale` property: accept takes the entries back as they are.
+- **Steps 4, 6, 7:** set-message, retry and accept scan without `include`/`exclude` as well, for the reason of
+  step 3.
+- **Steps 5, 6:** `_settle` moved to `application/common/settle.py` as `settle` (with `WRITTEN`) beside
+  `recorded_fallbacks`: retry writes the same way, and honours `options.strict` at no cost.
+- **Step 6:** for each target it writes, retry drops the chosen entries **and every path the event reports**, then
+  adds all of the event's fallbacks, not the chosen ones only: a message never translated before (decision 001's
+  accepted edge) that falls back is recorded too. The unchosen fallbacks are reused, so the event does not report
+  them, and they stay.
 
 ## Steps
 
