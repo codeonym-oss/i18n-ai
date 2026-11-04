@@ -1,0 +1,7 @@
+- 2026-10-26: drafted by the story's global pass (GH-15).
+- 2026-10-26: created as #30, a sub-issue of #15, on board 4 (Todo).
+- 2026-10-26: ticket pass done (decisions 001–004), impl.md written.
+- 2026-10-26: status building on feat/30-tui-setup-screen
+- 2026-10-26: built on feat/30-tui-setup-screen; reviewed (standards, spec), fixes applied
+- 2026-10-26: PR #37 opened; status in-review
+- 2026-10-29: PR #37 merged (3d271ba); status done

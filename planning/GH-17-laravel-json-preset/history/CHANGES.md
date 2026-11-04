@@ -1,0 +1,10 @@
+- 2026-10-23: started grilling the Laravel part of #17.
+- 2026-10-23: grilled (decisions 001–006) and drafted; the ticket is #17 itself.
+- 2026-10-23: approved; #17 retitled and its description replaced with draft.md (tracked).
+- 2026-10-23: ticket pass: decisions 007–014 (007 and 010 supersede 003 and 002 in part); draft.md updated; impl.md written (planned).
+- 2026-10-23: branch feat/17-laravel created from origin/main (building).
+- 2026-10-23: built steps 1–13; impl.md notes four corrections made while building.
+- 2026-10-23: committed in four commits (4cc14d1, 6c86ae8, 7c5ac6d, 16aac1e), per decision 005; each passes the suite.
+- 2026-10-23: PR #27 opened (in-review); #17 moved to In Review.
+- 2026-10-23: #17's description replaced with the updated draft.md.
+- 2026-10-23: PR #27 squash-merged (63e1615); #17 closed and moved to Done (done).

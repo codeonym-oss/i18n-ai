@@ -1,0 +1,7 @@
+- 2026-10-26: drafted by the story's global pass (GH-15).
+- 2026-10-26: created as #29, a sub-issue of #15, on board 4 (Todo).
+- 2026-10-26: ticket pass done (decisions 001–003), impl.md written; draft corrected: the receipt stays as it is.
+- 2026-10-26: building on feat/29-record-fallbacks.
+- 2026-10-26: built; impl.md notes what changed after the review.
+- 2026-10-26: PR #35 opened.
+- 2026-10-26: merged as 8287930 (PR #35).
