@@ -1,8 +1,8 @@
 ---
-status: open
+status: done
 from: agent
 found-while: GH-33
-resolved-by:
+resolved-by: GH-50
 ---
 
 # Five Dependabot alerts on `main`
