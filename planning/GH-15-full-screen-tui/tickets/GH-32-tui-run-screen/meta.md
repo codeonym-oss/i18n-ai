@@ -1,0 +1,12 @@
+---
+kind: ticket
+title: Watch a TUI run live, retries and failures included
+key: GH-32
+parent: GH-15
+status: done
+branch: feat/32-tui-run-screen
+tracker-url: https://github.com/codeonym-oss/i18n-ai/issues/32
+mr: https://github.com/codeonym-oss/i18n-ai/pull/39
+created: 2026-10-26
+updated: 2026-10-29
+---

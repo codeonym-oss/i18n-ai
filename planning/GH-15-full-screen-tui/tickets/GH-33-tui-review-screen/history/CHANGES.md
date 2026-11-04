@@ -1,0 +1,2 @@
+- 2026-10-26: drafted by the story's global pass (GH-15).
+- 2026-10-26: created as #33, a sub-issue of #15, on board 4 (Todo).

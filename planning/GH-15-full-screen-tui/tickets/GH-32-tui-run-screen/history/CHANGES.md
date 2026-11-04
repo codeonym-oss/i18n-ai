@@ -1,0 +1,8 @@
+- 2026-10-26: drafted by the story's global pass (GH-15).
+- 2026-10-26: created as #32, a sub-issue of #15, on board 4 (Todo).
+- 2026-10-29: ticket pass: decisions 001–002, impl.md written; draft.md updated (the events' names, the grid, the console test); status planned.
+- 2026-10-29: branch feat/32-tui-run-screen cut from a1ec720; status building; board In Progress; issue body updated from draft.md.
+- 2026-10-29: impl.md: corrections while building (events beside the receipt, Planned.off, step 2's skip).
+- 2026-10-29: review: decision 003 (the events and FileResult in the progress port); impl.md's corrections updated.
+- 2026-10-29: status in-review, mr #39 (meta.md copied to history/).
+- 2026-10-29: status done, merged as a9fc741 (meta.md copied to history/).

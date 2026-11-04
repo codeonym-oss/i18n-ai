@@ -1,0 +1,7 @@
+- 2026-10-26: drafted by the story's global pass (GH-15).
+- 2026-10-26: created as #31, a sub-issue of #15, on board 4 (Todo).
+- 2026-10-29: ticket pass: decisions 001–005, impl.md written; draft.md updated (Plan button, the precheck's record, "up to date", the command line's note); status planned.
+- 2026-10-29: branch feat/31-tui-plan-screen cut from 3d271ba; status building; board In Progress; issue body updated from draft.md.
+- 2026-10-29: impl.md step 4 corrected: the --exclude patterns go through command_line's existing flags.
+- 2026-10-29: committed d2bbda5, PR #38 opened; status in-review; board In Review.
+- 2026-10-29: PR #38 merged (a1ec720); status done; board Done.
