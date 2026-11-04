@@ -55,11 +55,19 @@ class I18nAiApp(App[None]):
     def get_system_commands(self, screen: Screen[object]) -> Iterable[SystemCommand]:
         if isinstance(screen, SetupScreen):
             yield SystemCommand("Plan", "See what the run will do, then run it", screen.action_plan)
+            if screen.fallbacks:
+                yield SystemCommand(
+                    "Review fallbacks", "Edit, retry or accept them", screen.action_review
+                )
         if isinstance(screen, PlanScreen):
             yield SystemCommand("Run", "Generate the cells that are on", screen.action_run)
         if isinstance(screen, RunScreen) and screen.done:
             yield SystemCommand(
                 "Back to setup", "Change the form, and run again", screen.action_back
+            )
+        if isinstance(screen, RunScreen) and screen.reviewable:
+            yield SystemCommand(
+                "Review fallbacks", "Edit, retry or accept them", screen.action_review
             )
         yield from super().get_system_commands(screen)
 

@@ -20,10 +20,10 @@ from textual.widgets import (
     Static,
 )
 
-from ...application.contract import ApplicationException
 from ...application.exports.locale import (
     DetectLocaleTreesQuery,
     GenerateLocalesCommand,
+    ListFallbacksQuery,
     ListLocalesQuery,
     LocaleView,
     ScanLocaleTreeQuery,
@@ -37,8 +37,6 @@ from ...application.exports.provider import (
     SetProviderKeyCommand,
 )
 from ...application.ports.locale import TreeRequest
-from ...di import InfraException
-from ...domain.contract import DomainException
 from ...domain.exports.locale import LocaleCode, SourceLocaleUnknown
 from ...domain.exports.provider import ModelSpec
 from ...runtime.answers import Answers, save_answers
@@ -60,10 +58,9 @@ from ..common.setup import (
 from .confirm import ConfirmScreen
 from .plan import PlanScreen, count
 from .progress import TuiProgress
+from .refusals import REFUSALS
+from .review import ReviewScreen
 from .run import RunScreen
-
-# What the mediator refuses with: shown, and the form stays as it was.
-REFUSALS = (DomainException, ApplicationException, InfraException)
 
 
 class SetupScreen(Screen[None]):
@@ -80,8 +77,9 @@ class SetupScreen(Screen[None]):
     SetupScreen #targets { height: auto; max-height: 6; }
     SetupScreen #go { height: auto; margin-top: 1; }
     SetupScreen #plan { padding-left: 2; color: $text-muted; }
+    SetupScreen #fallbacks { padding-left: 14; color: $warning; }
     """
-    BINDINGS = [Binding("ctrl+r", "plan", "Plan")]
+    BINDINGS = [Binding("ctrl+r", "plan", "Plan"), Binding("v", "review", "Review")]
 
     def __init__(
         self,
@@ -110,6 +108,7 @@ class SetupScreen(Screen[None]):
         self._checked: set[str] = set()
         self._providers: dict[str, ProviderView] = {}
         self._keyed: set[str] = set()  # the providers given a key here
+        self.fallbacks = 0  # recorded beside the tree's targets
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -136,6 +135,7 @@ class SetupScreen(Screen[None]):
                 "Output",
                 Select[str]([], id="output", prompt="Where they go", compact=True, disabled=True),
             )
+            yield Static("", id="fallbacks")
             yield Label("Model", classes="group")
             yield _row("Provider", Select[str]([], id="provider", prompt="Pick", compact=True))
             yield _row(
@@ -157,6 +157,7 @@ class SetupScreen(Screen[None]):
     async def on_mount(self) -> None:
         self.query_one("#source-row").display = False
         self.query_one("#tree-path").display = False
+        self.query_one("#fallbacks").display = False
         self._show_key(None)
         try:
             # The project's preset and trees, its first
@@ -234,6 +235,7 @@ class SetupScreen(Screen[None]):
         choices, default = output_choices(found.root, self._last, self._shown)
         _fill(self.query_one("#output", Select), choices, default or "")
         self._tree_ready(True)
+        await self._count_fallbacks()
 
     def _tree_ready(self, ready: bool) -> None:
         for selector in ("#search", "#targets", "#output"):
@@ -241,7 +243,47 @@ class SetupScreen(Screen[None]):
         if not ready:
             self._targets, self._checked = [], set()
             self._show_targets()
+            self._show_fallbacks(0)
         self._plan()
+
+    async def on_screen_resume(self) -> None:
+        # Back from a run or a review, the record may have changed
+        if self._source:
+            await self._count_fallbacks()
+
+    async def _count_fallbacks(self) -> None:
+        if self._request is None:
+            return
+        try:
+            view = await self._mediator.send(ListFallbacksQuery(self._request))
+        except REFUSALS:
+            view = None
+        self._show_fallbacks(len(view.entries) if view is not None else 0)
+
+    def _show_fallbacks(self, number: int) -> None:
+        self.fallbacks = number
+        line = self.query_one("#fallbacks", Static)
+        line.display = bool(number)
+        line.update(f"{count(number, 'fallback')} recorded · v to review")
+        self.refresh_bindings()
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        return bool(self.fallbacks) if action == "review" else True
+
+    def _model(self) -> ModelSpec | None:
+        """The form's model, once its provider and model are picked."""
+        provider = self.query_one("#provider", Select).value
+        model = self.query_one("#model", Select).value
+        if isinstance(provider, str) and isinstance(model, str):
+            return ModelSpec(f"{provider}:{model}")
+        return None
+
+    def action_review(self) -> None:
+        if self._request is not None and self.fallbacks:
+            self.app.push_screen(self._review_screen(self._request, self._model()))
+
+    def _review_screen(self, request: TreeRequest, model: ModelSpec | None) -> ReviewScreen:
+        return ReviewScreen(self._mediator, request, model, generation_options(self._settings))
 
     @on(Input.Changed, "#search")
     def _search(self) -> None:
@@ -439,7 +481,12 @@ class SetupScreen(Screen[None]):
             f"{count(len(plan.skip), 'single cell')} {'was' if one else 'were'} off; "
             f"this command runs {'it' if one else 'them'} too."
         )
-        screen.show_receipt(receipt, again, note if plan.skip else None)
+        try:
+            left = (await self._mediator.send(ListFallbacksQuery(request))).entries
+        except REFUSALS:
+            left = ()
+        review = (lambda: self._review_screen(request, ModelSpec(spec))) if left else None
+        screen.show_receipt(receipt, again, note if plan.skip else None, review)
 
 
 def _row(

@@ -55,6 +55,17 @@ class MessageRef:
   adds all of the event's fallbacks, not the chosen ones only: a message never translated before (decision 001's
   accepted edge) that falls back is recorded too. The unchosen fallbacks are reused, so the event does not report
   them, and they stay.
+- **Step 8:** `ReviewScreen` also takes the `GenerationOptions` (the setup's `generation_options(settings)`), which
+  retry sends; without a model, the hint "Pick a model in the setup to retry." shows under the detail.
+- **Step 9:** `EditScreen` is a `ModalScreen[bool]` that sends `SetMessageCommand` itself: True when written; a
+  refused text shows its errors under the input. Edit is shown disabled on a stale row.
+- **Step 11:** `RunScreen.show_receipt` takes a `review` factory, set by the setup when `ListFallbacksQuery` finds
+  entries after the run; `v` and the palette's "Review fallbacks" show when it is set.
+- **Step 12:** the setup counts the fallbacks after each scan and on `ScreenResume` (back from a run or a review).
+- **Steps 8–13:** the `Pilot` tests are in `tests/tui/test_tui.py`, not a new file: they share its `isolated` and
+  `gateway` fixtures and its helpers. A record "left by a CLI run" is made by sending `GenerateLocalesCommand`
+  through a container of its own, as the CLI does. `REFUSALS` moved to `cli/tui/refusals.py`, shared by the setup
+  and the review.
 
 ## Steps
 

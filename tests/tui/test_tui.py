@@ -6,19 +6,34 @@ import time
 from pathlib import Path
 
 import pytest
+from mediary import Mediator
+from rich.console import Console
+from textual.content import Content
 from textual.coordinate import Coordinate
 from textual.pilot import Pilot
 from textual.widgets import DataTable, Input, Log, Select, SelectionList, Static
 from textual.widgets.select import InvalidSelectValueError
 
-from i18n_ai.application.exports.locale import ScanReport, SourceFileView, TargetView
+from i18n_ai.application.exports.locale import (
+    GenerateLocalesCommand,
+    GenerationOptions,
+    ScanReport,
+    SourceFileView,
+    TargetView,
+)
+from i18n_ai.application.ports.locale import TreeRequest
 from i18n_ai.cli.tui import I18nAiApp
 from i18n_ai.cli.tui.confirm import ConfirmScreen
 from i18n_ai.cli.tui.grid import JobGrid
 from i18n_ai.cli.tui.plan import PlanScreen
+from i18n_ai.cli.tui.review import EditScreen, ReviewScreen
 from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.cli.tui.setup import SetupScreen
 from i18n_ai.di import bootstrap
+from i18n_ai.di.container import build_container
+from i18n_ai.di.messaging import build_mediator
+from i18n_ai.domain.exports.locale import LocaleCode
+from i18n_ai.domain.exports.provider import ModelSpec
 from i18n_ai.runtime.config import GenerationConfig
 from i18n_ai.runtime.settings import Settings
 from support.fakes import FakeGateway, FakeModel, InstalledCatalog
@@ -584,3 +599,207 @@ async def showing(pilot: Pilot[None], text: str, every: bool = False) -> RunScre
                 return screen
         await pilot.pause(0.05)
     raise AssertionError(f"no cell reads {text!r}")
+
+
+RECORD = "locales/.i18n-ai-fallbacks.json"
+
+
+async def fallen(project: Path, gateway: FakeGateway, *keys: str) -> None:
+    """A CLI run into fr that leaves `keys` as fallbacks, as `i18n-ai generate` would."""
+    gateway.broken_first = set(keys)
+    container = build_container(build_mediator(), Console(quiet=True), FakeModel(gateway))
+    async with container() as request:
+        mediator = await request.get(Mediator)
+        await mediator.send(
+            GenerateLocalesCommand(
+                TreeRequest(project / "locales" / "en"),
+                (LocaleCode("fr"),),
+                ModelSpec("openai:fake-model"),
+                GenerationOptions(max_attempts=1),
+            )
+        )
+    await container.close()
+    gateway.broken_first = set()
+    gateway.batches.clear()
+
+
+async def reviewing(pilot: Pilot[None]) -> ReviewScreen:
+    await pilot.press("v")
+    await settle(pilot)
+    screen = pilot.app.screen
+    assert isinstance(screen, ReviewScreen)
+    return screen
+
+
+def rows(screen: ReviewScreen) -> list[list[str]]:
+    grid = screen.query_one(DataTable)
+    return [[str(cell) for cell in grid.get_row_at(i)] for i in range(grid.row_count)]
+
+
+def french(project: Path) -> dict:  # type: ignore[type-arg]
+    return json.loads((project / "locales/fr/common.json").read_text(encoding="utf-8"))
+
+
+async def edit(pilot: Pilot[None], text: str) -> None:
+    await pilot.press("e")
+    await settle(pilot)
+    assert isinstance(pilot.app.screen, EditScreen)
+    pilot.app.screen.query_one(Input).value = text
+    await pilot.press("enter")
+    await settle(pilot)
+
+
+async def test_the_setup_says_fallbacks_are_recorded_and_opens_their_review(
+    isolated: Path, gateway: FakeGateway
+) -> None:
+    await fallen(isolated, gateway, "app.welcome")
+    app = tui(isolated)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        line = app.screen.query_one("#fallbacks", Static)
+        assert line.display
+        assert str(line.content) == "1 fallback recorded · v to review"
+        assert "Review fallbacks" in [c.title for c in app.get_system_commands(app.screen)]
+
+        review = await reviewing(pilot)
+
+        assert rows(review) == [
+            ["", "fr/common.json", "app.welcome", "placeholders", "Welcome back, {{name}}!"]
+        ]
+        detail = Content.from_markup(str(review.query_one("#detail", Static).content)).plain
+        assert "Source    Welcome back, {{name}}!" in detail
+        assert "missing {{name}}" in detail
+        assert review.query_one("#hint").display  # no model picked: retry is off
+        assert review.check_action("retry", ()) is None
+
+
+async def test_an_edit_is_checked_then_written(isolated: Path, gateway: FakeGateway) -> None:
+    await fallen(isolated, gateway, "app.welcome")
+    app = tui(isolated)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        await reviewing(pilot)
+        before = french(isolated)
+
+        await edit(pilot, "Bon retour !")
+        dialog = app.screen
+        assert isinstance(dialog, EditScreen)
+        assert str(dialog.query_one("#problems", Static).content) == "missing {{name}}"
+        assert french(isolated) == before
+
+        dialog.query_one(Input).value = "Bon retour, {{name}} !"
+        await pilot.press("enter")
+        await settle(pilot)
+
+        review = app.screen
+        assert isinstance(review, ReviewScreen)
+        assert rows(review) == []
+        assert review.query_one("#empty").display
+        assert french(isolated)["app"]["welcome"] == "Bon retour, {{name}} !"
+        assert not (isolated / RECORD).exists()
+
+        await pilot.press("b")
+        await settle(pilot)
+        assert isinstance(app.screen, SetupScreen)
+        assert not app.screen.query_one("#fallbacks").display
+
+
+async def test_the_marked_fallbacks_are_retried_with_the_forms_model(
+    isolated: Path, gateway: FakeGateway
+) -> None:
+    await fallen(isolated, gateway, "app.welcome", "cart.total")
+    app = tui(isolated)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        await ready(pilot)
+        review = await reviewing(pilot)
+        assert len(rows(review)) == 2
+        await pilot.press("space", "down", "space")
+        assert [row[0] for row in rows(review)] == ["●", "●"]
+
+        await pilot.press("r")
+        await settle(pilot)
+
+        sent = sorted(str(unit.path) for batch in gateway.batches for unit in batch.units)
+        assert sent == ["app.welcome", "cart.total"]
+        assert rows(review) == []
+        assert french(isolated)["app"]["welcome"] == "[fr] Welcome back, {{name}}!"
+        assert not (isolated / RECORD).exists()
+
+
+async def test_accepting_the_highlighted_fallback_leaves_the_others(
+    isolated: Path, gateway: FakeGateway
+) -> None:
+    await fallen(isolated, gateway, "app.welcome", "cart.total")
+    app = tui(isolated)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        review = await reviewing(pilot)
+
+        await pilot.press("a")
+        await settle(pilot)
+
+        assert [row[2] for row in rows(review)] == ["cart.total"]
+        assert french(isolated)["app"]["welcome"] == "Welcome back, {{name}}!"
+
+
+async def test_a_run_that_leaves_a_fallback_opens_its_review_and_an_edit_fixes_it(
+    isolated: Path, vault: object, gateway: FakeGateway
+) -> None:
+    gateway.broken_first = {"app.welcome"}
+    app = tui(isolated, attempts=1)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        await ready(pilot)
+        await planning(pilot)
+        await pilot.press("ctrl+r")
+        run = await ended(pilot)
+        assert run.reviewable
+
+        review = await reviewing(pilot)
+        assert [row[2] for row in rows(review)] == ["app.welcome"]
+        await edit(pilot, "Bon retour, {{name}} !")
+
+        assert rows(review) == []
+        assert not (isolated / RECORD).exists()
+        for name in ("common.json", "auth/login.json"):
+            assert (isolated / "locales/fr" / name).is_file()
+        assert french(isolated)["app"]["welcome"] == "Bon retour, {{name}} !"
+        await pilot.press("b")
+        await settle(pilot)
+        assert app.screen is run
+
+
+async def test_a_run_without_fallbacks_has_no_review(isolated: Path, vault: object) -> None:
+    app = tui(isolated)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        await ready(pilot)
+        await planning(pilot)
+        await pilot.press("ctrl+r")
+        run = await ended(pilot)
+
+        assert not run.reviewable
+
+
+async def test_a_stale_entry_says_so_and_can_only_be_accepted(
+    isolated: Path, gateway: FakeGateway
+) -> None:
+    await fallen(isolated, gateway, "app.welcome")
+    source = isolated / "locales/en/common.json"
+    content = json.loads(source.read_text(encoding="utf-8"))
+    del content["app"]["welcome"]
+    source.write_text(json.dumps(content), encoding="utf-8")
+    app = tui(isolated)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        review = await reviewing(pilot)
+
+        detail = Content.from_markup(str(review.query_one("#detail", Static).content)).plain
+        assert "Source    no longer in the source" in detail
+        assert review.check_action("edit", ()) is None
+        await pilot.press("a")
+        await settle(pilot)
+
+        assert rows(review) == []
+        assert not (isolated / RECORD).exists()
