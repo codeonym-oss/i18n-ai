@@ -25,3 +25,29 @@ def test_without_leaves_the_document_as_it_was() -> None:
     document.without([KeyPath(("auth", "locked"))])
 
     assert document.content == {"auth": {"locked": "Locked"}}
+
+
+def test_with_value_sets_a_nested_key_an_array_item_and_a_plural_form() -> None:
+    document = LocaleDocument(
+        {"auth": {"title": "Login"}, "steps": ["Un", "Two"], "cart": {"item_one": "Ein"}}
+    )
+
+    changed = (
+        document.with_value(KeyPath(("auth", "title")), "Connexion")
+        .with_value(KeyPath(("steps", 1)), "Deux")
+        .with_value(KeyPath(("cart", "item_few")), "Kilka")
+    )
+
+    assert changed.content == {
+        "auth": {"title": "Connexion"},
+        "steps": ["Un", "Deux"],
+        "cart": {"item_one": "Ein", "item_few": "Kilka"},
+    }
+
+
+def test_with_value_leaves_the_document_as_it_was() -> None:
+    document = LocaleDocument({"auth": {"title": "Login"}})
+
+    document.with_value(KeyPath(("auth", "title")), "Connexion")
+
+    assert document.content == {"auth": {"title": "Login"}}

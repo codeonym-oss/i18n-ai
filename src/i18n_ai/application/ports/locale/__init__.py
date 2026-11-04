@@ -10,7 +10,7 @@ from .engine import (
     ITranslationEngine,
     TranslationJob,
 )
-from .fallbacks import FallbackProblem, IFallbackRecord, RecordedFallback
+from .fallbacks import FallbackProblem, IFallbackRecord, MessageRef, RecordedFallback
 from .project import IProjectInspector
 from .scanner import ILocaleTreeScanner, TreeCandidate, TreeRequest
 from .store import ILocaleStore
@@ -30,6 +30,7 @@ __all__ = [
     "ILocaleTreeScanner",
     "IProjectInspector",
     "ITranslationEngine",
+    "MessageRef",
     "RecordedFallback",
     "TranslationJob",
     "TreeCandidate",

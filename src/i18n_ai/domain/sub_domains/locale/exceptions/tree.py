@@ -62,3 +62,25 @@ class PresetUnknown(DomainException):
             error_code="PRESET_UNKNOWN",
             details={"name": name},
         )
+
+
+class MessageUnknown(DomainException):
+    """A path is no message of a source file's translation into a target."""
+
+    def __init__(self, file: str, target: str, path: str) -> None:
+        super().__init__(
+            message=f"{path} is no message of {file} in {target}",
+            error_code="MESSAGE_UNKNOWN",
+            details={"file": file, "target": target, "path": path},
+        )
+
+
+class TargetNotGenerated(DomainException):
+    """A target has no version of a source file yet, so it has no message to set."""
+
+    def __init__(self, file: str, target: str) -> None:
+        super().__init__(
+            message=f"{target} has no version of {file} yet; generate it first",
+            error_code="TARGET_NOT_GENERATED",
+            details={"file": file, "target": target},
+        )

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from ....domain.exports.locale import KeyPath, ViolationCode
+from ....domain.exports.locale import KeyPath, LocaleCode, ViolationCode
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,16 @@ class RecordedFallback:
     def target(self) -> tuple[PurePosixPath, str | None]:
         """The target it is in: its file and key."""
         return self.file, self.key
+
+
+@dataclass(frozen=True)
+class MessageRef:
+    """A message of a target: the source file it is translated from, by its name in the tree,
+    the target, and the message's path there."""
+
+    file: PurePosixPath
+    target: LocaleCode
+    path: KeyPath
 
 
 class IFallbackRecord(ABC):
