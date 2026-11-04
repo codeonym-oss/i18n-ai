@@ -1,3 +1,4 @@
 - 2026-10-26: started the global pass on #15, which already exists as an issue.
 - 2026-10-26: global pass done (decisions 001–010); drafted the story and its five tickets.
 - 2026-10-26: replaced #15's body with draft.md; created tickets #29–#33 as its sub-issues, and the shell story as #34 (Backlog).
+- 2026-11-04: every ticket done (#29–#33); the story is done.
