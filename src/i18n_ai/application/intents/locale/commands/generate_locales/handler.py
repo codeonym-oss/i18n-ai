@@ -1,4 +1,3 @@
-import logging
 from pathlib import PurePosixPath
 
 from mediary.cqrs import CommandHandler, command_handler
@@ -6,20 +5,24 @@ from mediary.cqrs import CommandHandler, command_handler
 from ......domain.exports.locale import (
     LocaleCode,
     LocaleDocument,
-    LocaleTree,
     SourceFile,
     qualify,
 )
 from ......domain.exports.provider import ProviderNotInstalled
-from .....common import record_target, recorded_paths, validated_targets
+from .....common import (
+    WRITTEN,
+    record_target,
+    recorded_fallbacks,
+    recorded_paths,
+    settle,
+    validated_targets,
+)
 from .....ports.locale import (
     AtomStarted,
     AttemptRejected,
     EngineRequest,
     EngineSettings,
-    FallbackProblem,
     FileClassified,
-    FileFailed,
     FileTranslated,
     IFallbackRecord,
     ILocaleStore,
@@ -41,8 +44,6 @@ from .....ports.progress import (
 from .....ports.provider import IProviderCatalog
 from .cmd import GenerateLocalesCommand
 from .receipt import GenerationReceipt
-
-logger = logging.getLogger(__name__)
 
 
 @command_handler
@@ -170,13 +171,13 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                         )
                     )
                     continue
-                result = await self._settle(tree, event, options.strict)
+                result = await settle(self._store, tree, event, options.strict)
                 results.append(result)
-                if isinstance(event, FileTranslated) and result.status in _WRITTEN:
+                if isinstance(event, FileTranslated) and result.status in WRITTEN:
                     location = tree.target_location(event.job.target, event.job.file)
                     place = record_target(directory, location)
                     written.add(place)
-                    entries.extend(_recorded(place, event))
+                    entries.extend(recorded_fallbacks(place, event))
                 self._progress.on(JobDone(result))
         finally:
             if written:
@@ -185,54 +186,3 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
             self._progress.on(RunFinished())
 
         return GenerationReceipt(model=model.spec, results=tuple(results))
-
-    async def _settle(
-        self, tree: LocaleTree, event: FileTranslated | FileFailed, strict: bool
-    ) -> FileResult:
-        """Write a translated file, unless it is refused; and say what became of it."""
-        job = event.job
-        location = tree.target_location(job.target, job.file)
-        name, target = str(job.file.name), job.target.value
-        if isinstance(event, FileFailed):
-            logger.warning("%s → %s failed: %s", name, target, event.error)
-            return FileResult(name, target, location.path, ResultStatus.FAILED, reason=event.error)
-
-        status = ResultStatus.PARTIAL if event.failures else ResultStatus.WRITTEN
-        if event.failures and strict:
-            status = ResultStatus.REFUSED
-        else:
-            await self._store.write(location, event.content, job.file)
-        return FileResult(
-            file=name,
-            target=target,
-            path=location.path,
-            status=status,
-            translated=event.translated,
-            reused=event.reused,
-            failures=event.failures,
-            warnings=event.warnings,
-        )
-
-
-_WRITTEN = (ResultStatus.WRITTEN, ResultStatus.PARTIAL)
-
-
-def _recorded(
-    place: tuple[PurePosixPath, str | None], event: FileTranslated
-) -> list[RecordedFallback]:
-    """The fallbacks `event` wrote at `place`, as the record keeps them."""
-    file, key = place
-    return [
-        RecordedFallback(
-            file,
-            key,
-            path,
-            tuple(
-                FallbackProblem(violation.code, violation.message)
-                for violation in event.failures
-                if violation.path == path
-            ),
-            rejected,
-        )
-        for path, rejected in event.rejected.items()
-    ]

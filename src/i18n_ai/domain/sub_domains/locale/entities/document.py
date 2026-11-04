@@ -64,6 +64,30 @@ class LocaleDocument:
                 parent[last] = None
         return LocaleDocument(content, self.notes)
 
+    def with_value(self, path: KeyPath, text: str) -> "LocaleDocument":
+        """A copy with `text` at `path`. A missing object on the way is made; an array's item
+        must be there. Raises `ValueError` when `path` cannot hold a value in this document."""
+        segments = path.segments
+        if not segments:
+            raise ValueError("the document's root cannot hold a value")
+        content = copy.deepcopy(self.content)
+        node: Any = content
+        for index, segment in enumerate(segments):
+            last = index == len(segments) - 1
+            if isinstance(node, dict) and isinstance(segment, str):
+                if last:
+                    node[segment] = text
+                else:
+                    node = node.setdefault(segment, {})
+            elif isinstance(node, list) and isinstance(segment, int) and 0 <= segment < len(node):
+                if last:
+                    node[segment] = text
+                else:
+                    node = node[segment]
+            else:
+                raise ValueError(f"{path} cannot hold a value in this document")
+        return LocaleDocument(content, self.notes)
+
 
 def _leaves(node: Any, path: KeyPath) -> Iterator[tuple[KeyPath, Any]]:
     if isinstance(node, dict):

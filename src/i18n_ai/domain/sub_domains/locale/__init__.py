@@ -2,10 +2,12 @@ from .entities import LocaleDocument, LocaleTree, SourceFile, TargetLocation, is
 from .exceptions import (
     InvalidLocaleCode,
     LocaleTreeNotFound,
+    MessageUnknown,
     MixedLocaleFormats,
     PresetUnknown,
     SourceLocaleUnknown,
     TargetIsSource,
+    TargetNotGenerated,
 )
 from .placeholders import (
     Branching,
@@ -61,6 +63,7 @@ __all__ = [
     "LocaleTree",
     "LocaleTreeNotFound",
     "MessageSyntax",
+    "MessageUnknown",
     "MissingTranslations",
     "MixedLocaleFormats",
     "PipePlural",
@@ -79,6 +82,7 @@ __all__ = [
     "SourceUnit",
     "TargetIsSource",
     "TargetLocation",
+    "TargetNotGenerated",
     "TreeLayout",
     "Violation",
     "ViolationCode",
