@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from rich.console import Console
 from rich.text import Text
 from textual.app import ComposeResult
@@ -36,6 +38,7 @@ class RunScreen(Screen[None]):
     RunScreen #receipt { padding: 1 0; }
     """
     BINDINGS = [
+        Binding("v", "review", "Review"),
         Binding("b", "back", "Back to setup"),
         Binding("q", "app.quit", "Quit"),
     ]
@@ -46,6 +49,7 @@ class RunScreen(Screen[None]):
         self._files = [file.name for file in report.qualified]
         self._locales = [target.locale for target in report.targets]
         self._off = plan.off
+        self._review: Callable[[], Screen[None]] | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -96,9 +100,17 @@ class RunScreen(Screen[None]):
         problems.display = True
         problems.write_line(line)
 
-    def show_receipt(self, receipt: GenerationReceipt, again: str, note: str | None = None) -> None:
+    def show_receipt(
+        self,
+        receipt: GenerationReceipt,
+        again: str,
+        note: str | None = None,
+        review: Callable[[], Screen[None]] | None = None,
+    ) -> None:
         """The table the CLI prints, and the command that runs it again without the TUI, with
-        `note` saying where it differs from the run."""
+        `note` saying where it differs from the run; `review` opens the review of the fallbacks
+        it left, when it left some."""
+        self._review = review
         console = Console(width=max(self.app.size.width - 2, 60), highlight=False)
         with console.capture() as capture:
             render_receipt(console, receipt)
@@ -117,9 +129,19 @@ class RunScreen(Screen[None]):
         self.done = True
         self.refresh_bindings()
 
+    @property
+    def reviewable(self) -> bool:
+        return self.done and self._review is not None
+
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        # Back, once the run is over
+        # Back, once the run is over; Review, when it left fallbacks
+        if action == "review":
+            return self.reviewable
         return self.done if action == "back" else True
+
+    def action_review(self) -> None:
+        if self._review is not None:
+            self.app.push_screen(self._review())
 
     def action_back(self) -> None:
         self.dismiss()
