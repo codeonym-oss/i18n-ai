@@ -10,8 +10,10 @@ build:
     python: "3.13"
   jobs:
     pre_create_environment:
-      # From PyPI: asdf's `latest` asks GitHub's release redirect, which fails at times
+      # From PyPI: asdf's `latest` asks GitHub's release redirect, which fails at times;
+      # asdf's Python needs a reshim to put pip's `uv` on the PATH.
       - python -m pip install uv
+      - asdf reshim python
     # Sphinx 9 needs 3.12+: UV_PYTHON overrides the repo's .python-version.
     create_environment:
       - UV_PYTHON=3.13 uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
