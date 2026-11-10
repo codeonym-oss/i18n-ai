@@ -1,13 +1,36 @@
 from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
 
-from ...domain.exports.locale import KeyPath, TargetLocation
+from ...domain.exports.locale import (
+    KeyPath,
+    LocaleCode,
+    LocaleTree,
+    SourceFile,
+    TargetLocation,
+    qualify,
+)
 from ..ports.locale import FallbackProblem, FileTranslated, RecordedFallback
 
+_Place = tuple[PurePosixPath, str | None]
 
-def record_target(directory: Path, location: TargetLocation) -> tuple[PurePosixPath, str | None]:
+
+def record_target(directory: Path, location: TargetLocation) -> _Place:
     """A target in the record: its file, relative to the record's directory, and its key."""
     return PurePosixPath(location.path.relative_to(directory).as_posix()), location.bundle_key
+
+
+def record_targets(tree: LocaleTree) -> dict[_Place, tuple[SourceFile, LocaleCode, TargetLocation]]:
+    """The targets the record may name, by their place in it: every qualifying source file in
+    every locale the tree has. An entry that matches none has no target."""
+    targets: dict[_Place, tuple[SourceFile, LocaleCode, TargetLocation]] = {}
+    for file in tree.files:
+        if not qualify(file.document, file.error).qualifies:
+            continue
+        for locale in tree.existing:
+            if not locale.same_as(tree.source):
+                location = tree.target_location(locale, file)
+                targets[record_target(tree.target_directory, location)] = (file, locale, location)
+    return targets
 
 
 def recorded_paths(

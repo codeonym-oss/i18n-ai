@@ -1,3 +1,6 @@
+import logging
+from collections import Counter
+from dataclasses import replace
 from pathlib import PurePosixPath
 
 from mediary.cqrs import CommandHandler, command_handler
@@ -12,6 +15,7 @@ from ......domain.exports.provider import ProviderNotInstalled
 from .....common import (
     WRITTEN,
     record_target,
+    record_targets,
     recorded_fallbacks,
     recorded_paths,
     settle,
@@ -44,6 +48,8 @@ from .....ports.progress import (
 from .....ports.provider import IProviderCatalog
 from .cmd import GenerateLocalesCommand
 from .receipt import GenerationReceipt
+
+logger = logging.getLogger(__name__)
 
 
 @command_handler
@@ -105,6 +111,14 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
         # 3. The existing targets, whose good translations are kept, but for the recorded fallbacks
         directory = tree.target_directory
         recorded = await self._fallbacks.read(directory)
+        # The whole tree, `--include` and `--exclude` aside, tells which entries have no target;
+        # in the format read, since the filters may be what leaves a mixed tree with one
+        whole = tree
+        if command.tree.include or command.tree.exclude:
+            whole = await self._scanner.scan(
+                replace(command.tree, include=(), exclude=(), format=tree.format)
+            )
+        places = record_targets(whole)
         existing: dict[tuple[PurePosixPath, str], LocaleDocument] = {}
         if not options.overwrite:
             for file in qualified:
@@ -180,8 +194,19 @@ class GenerateLocalesCommandHandler(CommandHandler[GenerateLocalesCommand, Gener
                     entries.extend(recorded_fallbacks(place, event))
                 self._progress.on(JobDone(result))
         finally:
-            if written:
-                kept = [entry for entry in recorded if entry.target not in written]
+            gone = [entry for entry in recorded if entry.target not in places]
+            if gone:
+                logger.info(
+                    "dropped %d fallback record entries with no target: %s",
+                    len(gone),
+                    ", ".join(sorted({str(entry.file) for entry in gone})),
+                )
+            kept = [
+                entry
+                for entry in recorded
+                if entry.target in places and entry.target not in written
+            ]
+            if Counter(kept + entries) != Counter(recorded):
                 await self._fallbacks.write(directory, tuple(kept + entries))
             self._progress.on(RunFinished())
 
