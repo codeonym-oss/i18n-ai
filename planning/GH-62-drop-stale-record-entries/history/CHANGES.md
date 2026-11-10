@@ -9,3 +9,4 @@
 - 2026-11-10: impl.md written, status planned.
 - 2026-11-10: branch fix/62-drop-stale-record-entries, status building, #62 In Progress.
 - 2026-11-10: impl.md, corrections while building (the second scan keeps the format).
+- 2026-11-10: PR #63, merged; status done.
