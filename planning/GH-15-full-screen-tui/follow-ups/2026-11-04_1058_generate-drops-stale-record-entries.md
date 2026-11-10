@@ -1,8 +1,8 @@
 ---
-status: open
+status: done
 from: agent
 found-while: GH-33
-resolved-by:
+resolved-by: GH-62
 ---
 
 # `generate` keeps stale fallback record entries for good
