@@ -73,6 +73,7 @@ test = [
     "pytest>=9",
     "pytest-asyncio>=1.2",
     "pytest-cov>=7",
+    "syrupy>=6.1.1",
 ]
 dev = [
     {include-group = "test"},

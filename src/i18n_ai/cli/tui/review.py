@@ -4,8 +4,8 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
-from textual.screen import ModalScreen, Screen
-from textual.widgets import DataTable, Footer, Header, Input, Static
+from textual.screen import ModalScreen
+from textual.widgets import DataTable, Input, Static
 
 from ...application.exports.locale import (
     AcceptFallbacksCommand,
@@ -19,13 +19,15 @@ from ...application.exports.locale import (
 from ...application.ports.locale import MessageRef, TreeRequest
 from ...domain.exports.locale import errors
 from ...domain.exports.provider import ModelSpec
+from ..common.setup import within
+from .kit.shell import ShellScreen
 from .plan import count
 from .refusals import REFUSALS
 
 STALE = "no longer in the source"
 
 
-class ReviewScreen(Screen[None]):
+class ReviewScreen(ShellScreen[None]):
     """The fallbacks a tree's runs left: each with its source, the model's rejected translation
     and the rules it broke. One is edited by hand; the marked ones (or the highlighted one) are
     translated again with the setup's model, or accepted as they are. An entry whose message is
@@ -43,6 +45,7 @@ class ReviewScreen(Screen[None]):
         Binding("a", "accept", "Accept"),
         Binding("b,escape", "back", "Back"),
     ]
+    SECTION = "review"
 
     def __init__(
         self,
@@ -59,13 +62,14 @@ class ReviewScreen(Screen[None]):
         self._entries: tuple[FallbackView, ...] = ()
         self._marked: set[int] = set()
 
-    def compose(self) -> ComposeResult:
-        yield Header()
+    def body(self) -> ComposeResult:
         yield DataTable[str](id="fallbacks", cursor_type="row")
         yield Static("", id="detail")
         yield Static("Pick a model in the setup to retry.", id="hint")
         yield Static("No fallbacks to review.", id="empty")
-        yield Footer()
+
+    def status_tree(self) -> str:
+        return within(self.shell.project)(self._tree.path)
 
     async def on_mount(self) -> None:
         table = self.query_one(DataTable)
@@ -82,6 +86,8 @@ class ReviewScreen(Screen[None]):
             self.notify(error.message, severity="error")
             self._entries = ()
         self._marked.clear()
+        if self.status_tree() == self.shell.locale_tree:
+            self.shell.fallbacks = len(self._entries)  # the sidebar's count is of that tree
         table = self.query_one(DataTable)
         table.clear()
         for index, view in enumerate(self._entries):
@@ -187,7 +193,7 @@ class ReviewScreen(Screen[None]):
         await self._load()
 
     def action_back(self) -> None:
-        self.dismiss()
+        self.shell.leave_review()
 
 
 class EditScreen(ModalScreen[bool]):

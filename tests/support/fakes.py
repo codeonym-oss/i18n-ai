@@ -7,6 +7,7 @@ answers from a script."""
 import re
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from dishka import Provider, Scope, provide
 from keyring.backend import KeyringBackend
@@ -30,6 +31,9 @@ from i18n_ai.infra.adapters.langgraph import (
     LangGraphTranslationEngine,
 )
 
+if TYPE_CHECKING:
+    import asyncio
+
 
 class FakeGateway:
     def __init__(
@@ -39,6 +43,7 @@ class FakeGateway:
             broken_first or set()
         )  # keys whose first translation loses its placeholders
         self.refuse = refuse or set()  # file names the classifier refuses
+        self.hold: asyncio.Event | None = None  # when set here, translations wait for it
         self.batches: list[BatchRequest] = []
         self.classified: list[str] = []
 
@@ -48,6 +53,8 @@ class FakeGateway:
         return FileClassification(qualifies=not refused, reason="fake", subject="tests")
 
     async def translate(self, batch: BatchRequest) -> dict[str, str]:
+        if self.hold is not None:
+            await self.hold.wait()
         self.batches.append(batch)
         out: dict[str, str] = {}
         for unit in batch.units:

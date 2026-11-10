@@ -6,8 +6,6 @@ import time
 from pathlib import Path
 
 import pytest
-from mediary import Mediator
-from rich.console import Console
 from textual.content import Content
 from textual.coordinate import Coordinate
 from textual.pilot import Pilot
@@ -15,107 +13,18 @@ from textual.widgets import DataTable, Input, Log, Select, SelectionList, Static
 from textual.widgets.select import InvalidSelectValueError
 
 from i18n_ai.application.exports.locale import (
-    GenerateLocalesCommand,
-    GenerationOptions,
     ScanReport,
     SourceFileView,
     TargetView,
 )
-from i18n_ai.application.ports.locale import TreeRequest
-from i18n_ai.cli.tui import I18nAiApp
 from i18n_ai.cli.tui.confirm import ConfirmScreen
 from i18n_ai.cli.tui.grid import JobGrid
 from i18n_ai.cli.tui.plan import PlanScreen
 from i18n_ai.cli.tui.review import EditScreen, ReviewScreen
 from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.cli.tui.setup import SetupScreen
-from i18n_ai.di import bootstrap
-from i18n_ai.di.container import build_container
-from i18n_ai.di.messaging import build_mediator
-from i18n_ai.domain.exports.locale import LocaleCode
-from i18n_ai.domain.exports.provider import ModelSpec
-from i18n_ai.runtime.config import GenerationConfig
-from i18n_ai.runtime.settings import Settings
-from support.fakes import FakeGateway, FakeModel, InstalledCatalog
-
-KEYS = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY")
-
-
-@pytest.fixture
-def gateway() -> FakeGateway:
-    return FakeGateway()
-
-
-@pytest.fixture(autouse=True)
-def isolated(monkeypatch: pytest.MonkeyPatch, examples: Path, gateway: FakeGateway) -> Path:
-    """In the i18next example, with no provider key from the developer's machine, and the fake
-    model before the overrides, so that the TUI's progress wins over the fake's."""
-    project = examples / "i18next"
-    monkeypatch.chdir(project)
-    for key in KEYS:
-        monkeypatch.setenv(key, "")
-        monkeypatch.delenv(key)
-    build = bootstrap.build_container
-    monkeypatch.setattr(
-        bootstrap,
-        "build_container",
-        lambda mediator, console, *overrides: build(
-            mediator, console, FakeModel(gateway), *overrides
-        ),
-    )
-    return project
-
-
-def tui(project: Path, model: str | None = None, attempts: int = 3) -> I18nAiApp:
-    settings = Settings(generation=GenerationConfig(model=model, max_attempts=attempts))
-    return I18nAiApp(settings, project)
-
-
-async def settle(pilot: Pilot[None]) -> None:
-    """Until no worker is running and the messages are handled."""
-    await pilot.pause()
-    await pilot.app.workers.wait_for_complete()
-    await pilot.pause()
-
-
-async def pick(pilot: Pilot[None], selector: str, value: str) -> None:
-    pilot.app.screen.query_one(selector, Select).value = value
-    await settle(pilot)
-
-
-async def ended(pilot: Pilot[None], seconds: float = 10) -> RunScreen:
-    """The run screen, once the run is over."""
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        screen = pilot.app.screen
-        if isinstance(screen, RunScreen) and screen.done:
-            return screen
-        await pilot.pause(0.05)
-    raise AssertionError(f"the run did not end (on {type(pilot.app.screen).__name__})")
-
-
-async def planning(pilot: Pilot[None], seconds: float = 10) -> PlanScreen:
-    """The plan screen, from the setup's Plan; the setup's worker waits on it, so it is polled
-    for, not settled."""
-    await pilot.press("ctrl+r")
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        screen = pilot.app.screen
-        if isinstance(screen, PlanScreen) and screen.is_mounted:
-            await pilot.pause()
-            return screen
-        await pilot.pause(0.05)
-    raise AssertionError(f"no plan (on {type(pilot.app.screen).__name__})")
-
-
-async def ready(pilot: Pilot[None], *targets: str) -> None:
-    """The form filled in, with `targets` checked as well."""
-    screen = pilot.app.screen
-    for target in targets:
-        screen.query_one("#targets", SelectionList).select(target)
-    await pick(pilot, "#provider", "openai")
-    screen.query_one("#key", Input).value = "sk-test"
-    await pick(pilot, "#model", "fake-model")
+from support.fakes import FakeGateway, InstalledCatalog
+from support.tui import ended, fallen, pick, planning, ready, running, settle, tui
 
 
 def cells(screen: PlanScreen | RunScreen) -> list[list[str]]:
@@ -142,7 +51,7 @@ def text(screen: RunScreen) -> str:
 async def test_the_form_starts_from_the_projects_preset(isolated: Path) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         screen = app.screen
 
         assert isinstance(screen, SetupScreen)
@@ -160,7 +69,7 @@ async def test_the_model_waits_for_its_provider_and_a_missing_key_is_asked(
 ) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         screen = app.screen
         assert screen.query_one("#model", Select).disabled
 
@@ -175,7 +84,7 @@ async def test_the_model_waits_for_its_provider_and_a_missing_key_is_asked(
 async def test_the_search_keeps_what_is_checked(isolated: Path) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         screen = app.screen
         await pilot.click("#search")
         await pilot.press(*"germ")
@@ -199,7 +108,7 @@ async def test_a_run_writes_the_targets_and_says_how_to_run_it_again(
 ) -> None:
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         screen = app.screen
         await pick(pilot, "#provider", "openai")
         screen.query_one("#key", Input).value = "sk-test"
@@ -233,7 +142,7 @@ async def test_the_source_is_asked_when_the_tree_cannot_tell(
     monkeypatch.chdir(tmp_path / "site")
     app = tui(tmp_path / "site")
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         screen = app.screen
         await pick(pilot, "#tree", "locales")
         assert screen.query_one("#source-row").display
@@ -252,7 +161,7 @@ async def test_declining_the_install_goes_back_to_the_form(
     monkeypatch.setattr(InstalledCatalog, "is_installed", lambda self, module: False)
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await pick(pilot, "#provider", "ollama")
         await pick(pilot, "#model", "ollama-pick")
 
@@ -270,7 +179,7 @@ async def test_declining_the_install_goes_back_to_the_form(
 async def test_the_settings_model_is_the_default(isolated: Path) -> None:
     app = tui(isolated, model="openai:old-model")
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
 
         assert app.screen.query_one("#provider", Select).value == "openai"
         assert app.screen.query_one("#model", Select).value == "old-model"
@@ -279,7 +188,7 @@ async def test_the_settings_model_is_the_default(isolated: Path) -> None:
 async def test_another_provider_clears_the_models(isolated: Path) -> None:
     app = tui(isolated, model="openai:old-model")
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
 
         await pick(pilot, "#provider", "ollama")
 
@@ -300,7 +209,7 @@ async def test_with_no_tree_found_its_path_is_typed(
     monkeypatch.chdir(project)
     app = tui(project)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         screen = app.screen
         assert not screen.query_one("#tree", Select).display
         path = screen.query_one("#tree-path", Input)
@@ -316,7 +225,7 @@ async def test_with_no_tree_found_its_path_is_typed(
 async def test_run_waits_for_the_form(isolated: Path) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
 
         await pilot.press("ctrl+r")
         await settle(pilot)
@@ -328,7 +237,7 @@ async def test_run_waits_for_the_form(isolated: Path) -> None:
 async def test_the_palette_quits(isolated: Path) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
 
         await pilot.press("ctrl+p")
         await pilot.press(*"quit")
@@ -342,7 +251,7 @@ async def test_the_palette_quits(isolated: Path) -> None:
 async def test_every_field_fits_80_columns(isolated: Path) -> None:
     app = tui(isolated)
     async with app.run_test(size=(80, 24)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await pick(pilot, "#provider", "openai")
         screen = app.screen
 
@@ -358,7 +267,7 @@ async def test_every_field_fits_80_columns(isolated: Path) -> None:
 async def test_the_plan_shows_each_file_and_locale(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot, "de")
 
         plan = await planning(pilot)
@@ -375,7 +284,7 @@ async def test_the_plan_shows_each_file_and_locale(isolated: Path, vault: object
 async def test_a_cell_a_row_or_a_column_turns_off(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot, "de")
         plan = await planning(pilot)
 
@@ -399,7 +308,7 @@ async def test_a_cell_a_row_or_a_column_turns_off(isolated: Path, vault: object)
 async def test_the_plan_runs_nothing_with_every_cell_off(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         plan = await planning(pilot)
 
@@ -418,7 +327,7 @@ async def test_the_plan_runs_nothing_with_every_cell_off(isolated: Path, vault: 
 async def test_a_cell_turned_off_is_not_written(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot, "de")
         plan = await planning(pilot)
 
@@ -436,7 +345,7 @@ async def test_a_cell_turned_off_is_not_written(isolated: Path, vault: object) -
 async def test_a_row_off_is_excluded_in_the_command(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(140, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         plan = await planning(pilot)
 
@@ -456,7 +365,7 @@ async def test_a_row_off_is_excluded_in_the_command(isolated: Path, vault: objec
 async def test_the_plan_fits_80_columns(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(80, 24)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot, "de", "es", "it", "ja")
         plan = await planning(pilot)
 
@@ -482,7 +391,7 @@ async def test_a_plan_with_no_file_takes_its_keys(isolated: Path) -> None:
     )
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         plan = PlanScreen(report)
         await app.push_screen(plan)
         await pilot.pause()
@@ -511,7 +420,7 @@ async def test_a_retry_shows_in_its_cell_as_it_happens(
     )
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         await planning(pilot)
         await pilot.press("ctrl+r")
@@ -527,7 +436,7 @@ async def test_a_partial_file_is_listed_under_problems(
     gateway.broken_first = {"app.welcome"}
     app = tui(isolated, attempts=1)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         await planning(pilot)
         await pilot.press("ctrl+r")
@@ -541,7 +450,7 @@ async def test_a_partial_file_is_listed_under_problems(
 async def test_the_run_shows_waiting_cells_and_the_ones_off(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot, "de")
         plan = await planning(pilot)
         await on_cell(pilot, plan, 1, 2, "space")
@@ -573,7 +482,7 @@ async def test_a_run_goes_from_waiting_to_written(
     monkeypatch.setattr(gateway, "translate", held_translate)
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         await planning(pilot)
         await pilot.press("ctrl+r")
@@ -602,25 +511,6 @@ async def showing(pilot: Pilot[None], text: str, every: bool = False) -> RunScre
 
 
 RECORD = "locales/.i18n-ai-fallbacks.json"
-
-
-async def fallen(project: Path, gateway: FakeGateway, *keys: str) -> None:
-    """A CLI run into fr that leaves `keys` as fallbacks, as `i18n-ai generate` would."""
-    gateway.broken_first = set(keys)
-    container = build_container(build_mediator(), Console(quiet=True), FakeModel(gateway))
-    async with container() as request:
-        mediator = await request.get(Mediator)
-        await mediator.send(
-            GenerateLocalesCommand(
-                TreeRequest(project / "locales" / "en"),
-                (LocaleCode("fr"),),
-                ModelSpec("openai:fake-model"),
-                GenerationOptions(max_attempts=1),
-            )
-        )
-    await container.close()
-    gateway.broken_first = set()
-    gateway.batches.clear()
 
 
 async def reviewing(pilot: Pilot[None]) -> ReviewScreen:
@@ -655,7 +545,7 @@ async def test_the_setup_says_fallbacks_are_recorded_and_opens_their_review(
     await fallen(isolated, gateway, "app.welcome")
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         line = app.screen.query_one("#fallbacks", Static)
         assert line.display
         assert str(line.content) == "1 fallback recorded · v to review"
@@ -677,7 +567,7 @@ async def test_an_edit_is_checked_then_written(isolated: Path, gateway: FakeGate
     await fallen(isolated, gateway, "app.welcome")
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await reviewing(pilot)
         before = french(isolated)
 
@@ -710,7 +600,7 @@ async def test_the_marked_fallbacks_are_retried_with_the_forms_model(
     await fallen(isolated, gateway, "app.welcome", "cart.total")
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         review = await reviewing(pilot)
         assert len(rows(review)) == 2
@@ -733,7 +623,7 @@ async def test_accepting_the_highlighted_fallback_leaves_the_others(
     await fallen(isolated, gateway, "app.welcome", "cart.total")
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         review = await reviewing(pilot)
 
         await pilot.press("a")
@@ -749,7 +639,7 @@ async def test_a_run_that_leaves_a_fallback_opens_its_review_and_an_edit_fixes_i
     gateway.broken_first = {"app.welcome"}
     app = tui(isolated, attempts=1)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         await planning(pilot)
         await pilot.press("ctrl+r")
@@ -773,7 +663,7 @@ async def test_a_run_that_leaves_a_fallback_opens_its_review_and_an_edit_fixes_i
 async def test_a_run_without_fallbacks_has_no_review(isolated: Path, vault: object) -> None:
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         await ready(pilot)
         await planning(pilot)
         await pilot.press("ctrl+r")
@@ -792,7 +682,7 @@ async def test_a_stale_entry_says_so_and_can_only_be_accepted(
     source.write_text(json.dumps(content), encoding="utf-8")
     app = tui(isolated)
     async with app.run_test(size=(120, 40)) as pilot:
-        await settle(pilot)
+        await running(pilot)
         review = await reviewing(pilot)
 
         detail = Content.from_markup(str(review.query_one("#detail", Static).content)).plain

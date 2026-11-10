@@ -7,12 +7,9 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import Screen
 from textual.widgets import (
     Button,
     Checkbox,
-    Footer,
-    Header,
     Input,
     Label,
     Select,
@@ -21,7 +18,6 @@ from textual.widgets import (
 )
 
 from ...application.exports.locale import (
-    DetectLocaleTreesQuery,
     GenerateLocalesCommand,
     ListFallbacksQuery,
     ListLocalesQuery,
@@ -41,7 +37,6 @@ from ...domain.exports.locale import LocaleCode, SourceLocaleUnknown
 from ...domain.exports.provider import ModelSpec
 from ...runtime.answers import Answers, save_answers
 from ...runtime.config import GenerationConfig
-from ..common import tree_request, with_preset
 from ..common.setup import (
     Choice,
     answers_of,
@@ -52,18 +47,18 @@ from ..common.setup import (
     output_choices,
     provider_choices,
     source_choices,
-    tree_choices,
     within,
 )
 from .confirm import ConfirmScreen
+from .kit.shell import ShellScreen
 from .plan import PlanScreen, count
 from .progress import TuiProgress
 from .refusals import REFUSALS
-from .review import ReviewScreen
 from .run import RunScreen
+from .trees import Trees
 
 
-class SetupScreen(Screen[None]):
+class SetupScreen(ShellScreen[None]):
     """A generation set up as one form: the tree, its source and targets, where they go; the
     provider, its model and key. A field waits until what it depends on is set; the line beside
     Plan says how many files and locales the run covers."""
@@ -80,6 +75,7 @@ class SetupScreen(Screen[None]):
     SetupScreen #fallbacks { padding-left: 14; color: $warning; }
     """
     BINDINGS = [Binding("ctrl+r", "plan", "Plan"), Binding("v", "review", "Review")]
+    SECTION = "run"
 
     def __init__(
         self,
@@ -89,6 +85,8 @@ class SetupScreen(Screen[None]):
         progress: TuiProgress,
         project: Path,
         answers: Answers,
+        trees: Trees,
+        tree: str | None,
     ) -> None:
         super().__init__()
         self._mediator = mediator
@@ -101,7 +99,9 @@ class SetupScreen(Screen[None]):
         self._defaults = dataclasses.replace(answers, model=settings.model or answers.model)
         self._shown = within(project)
         self._request: TreeRequest | None = None
-        self._preset_tree = TreeRequest(Path())  # with the project's preset, once found
+        self._trees = trees
+        self._tree = tree  # the tree it starts on
+        self._preset_tree = trees.preset
         self._source = ""  # the tree's source locale, once scanned
         self._locales: tuple[LocaleView, ...] = ()
         self._targets: list[Choice] = []
@@ -110,8 +110,7 @@ class SetupScreen(Screen[None]):
         self._keyed: set[str] = set()  # the providers given a key here
         self.fallbacks = 0  # recorded beside the tree's targets
 
-    def compose(self) -> ComposeResult:
-        yield Header()
+    def body(self) -> ComposeResult:
         with VerticalScroll(id="form"):
             yield Label("Tree", classes="group")
             yield _row(
@@ -152,28 +151,17 @@ class SetupScreen(Screen[None]):
             with Horizontal(id="go"):
                 yield Button("Plan", id="next", variant="primary", compact=True)
                 yield Static("", id="plan")
-        yield Footer()
 
     async def on_mount(self) -> None:
         self.query_one("#source-row").display = False
         self.query_one("#tree-path").display = False
         self.query_one("#fallbacks").display = False
         self._show_key(None)
+        if not self._trees.choices:
+            self.query_one("#tree").display = False
+            self.query_one("#tree-path").display = True
+        _fill(self.query_one("#tree", Select), list(self._trees.choices), self._tree)
         try:
-            # The project's preset and trees, its first
-            base = tree_request(Path(), None, None, None, None)
-            self._preset_tree, match = await with_preset(
-                self._mediator, self._quiet, base, None, given=False
-            )
-            if match is not None:
-                self.app.sub_title = f"{match.preset.name} preset"
-            candidates = await self._mediator.send(DetectLocaleTreesQuery(self._project))
-            choices, default = tree_choices(candidates, match, self._last, self._shown)
-            if not choices:
-                self.query_one("#tree").display = False
-                self.query_one("#tree-path").display = True
-            _fill(self.query_one("#tree", Select), choices, default)
-
             # The providers, those ready first
             providers = await self._mediator.send(ListProvidersQuery())
             self._providers = {provider.name: provider for provider in providers}
@@ -280,10 +268,7 @@ class SetupScreen(Screen[None]):
 
     def action_review(self) -> None:
         if self._request is not None and self.fallbacks:
-            self.app.push_screen(self._review_screen(self._request, self._model()))
-
-    def _review_screen(self, request: TreeRequest, model: ModelSpec | None) -> ReviewScreen:
-        return ReviewScreen(self._mediator, request, model, generation_options(self._settings))
+            self.shell.open_review(self._request, self._model())
 
     @on(Input.Changed, "#search")
     def _search(self) -> None:
@@ -439,6 +424,7 @@ class SetupScreen(Screen[None]):
                     f"The {status.provider} provider needs {status.package}, not installed. "
                     "Install it now?"
                 )
+                await self._in_run()
                 if not await self.app.push_screen_wait(ConfirmScreen(question)):
                     return
                 self.notify(f"Installing {status.package}…")
@@ -449,12 +435,14 @@ class SetupScreen(Screen[None]):
         except REFUSALS as error:
             self.notify(error.message, severity="error")
             return
+        await self._in_run()
         plan = await self.app.push_screen_wait(PlanScreen(report))
         if plan is None:
             return
         request = dataclasses.replace(request, exclude=request.exclude + plan.exclude)
 
-        screen = RunScreen(report, plan)
+        screen = RunScreen(report, plan, self._shown(request.path))
+        await self._in_run()
         await self.app.push_screen(screen)
         self._progress.target = screen
         command = GenerateLocalesCommand(
@@ -485,8 +473,14 @@ class SetupScreen(Screen[None]):
             left = (await self._mediator.send(ListFallbacksQuery(request))).entries
         except REFUSALS:
             left = ()
-        review = (lambda: self._review_screen(request, ModelSpec(spec))) if left else None
+        review = (lambda: self.shell.open_review(request, ModelSpec(spec))) if left else None
         screen.show_receipt(receipt, again, note if plan.skip else None, review)
+
+    async def _in_run(self) -> None:
+        """The Run section shown, for a screen pushed on it: another section may have been
+        picked while the worker waited."""
+        if self.app.current_mode != "run":
+            await self.app.switch_mode("run")
 
 
 def _row(

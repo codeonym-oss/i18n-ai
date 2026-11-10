@@ -13,13 +13,23 @@ first time you use it, into its own environment, after asking. See [Providers](p
 
 ## Just run it
 
-In your project, run `i18n-ai` alone. At a terminal it opens a full-screen form:
+In your project, run `i18n-ai` alone. At a terminal it opens full screen, on **Home**:
 
-![The setup form of i18n-ai in a Laravel project](tui.svg)
+![Home in the i18next example: four figures, the coverage heatmap and the fallbacks' banner](tui.svg)
 
-It finds the locale trees in the project, the one your i18n library keeps first (see
-[Your framework](frameworks.md)), offers every CLDR locale (the ones already in the tree
-checked; type to search), lists the providers with the ones ready to use first, and reads the
+Home shows the locale tree you ran last, else the one your i18n library keeps (see
+[Your framework](frameworks.md)), else the first found: how much of it is translated, its source's messages,
+the fallbacks it holds (messages left in their source text) and its locales. Under them, a cell
+per locale and file, shaded by the share of its messages translated, **◐** marking those with
+fallbacks. When there are some, a banner leads to their review.
+
+The sidebar has three sections: **Home** (`Ctrl+O`), **Run** (`Ctrl+N`) and **Review** (`v`),
+where the fallbacks are edited, retried or accepted; `b` leaves it for the section you came from.
+A project with several trees has a switcher at the top right: it picks the tree Home, the review
+and a new run are on; a run going keeps its own.
+
+**Run** opens a form on the tree Home shows. It offers every CLDR locale (the ones already in
+the tree checked; type to search), lists the providers with the ones ready to use first, and reads the
 chosen provider's model list from its API, the recommended models first. A field waits until
 what it depends on is set: the model for its provider, the targets for their tree. A missing API
 key is asked for, hidden, and used for that run; it is saved in the system keyring only if you
