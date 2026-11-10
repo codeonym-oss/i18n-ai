@@ -1,4 +1,6 @@
 import json
+import logging
+import shutil
 from collections.abc import AsyncIterator
 from pathlib import Path, PurePosixPath
 
@@ -499,6 +501,91 @@ async def test_a_refused_or_failed_file_leaves_the_record_as_it_was(examples: Pa
     assert read(locales / ".i18n-ai-fallbacks.json") == before
 
 
+def recorded_files(locales: Path) -> list[str]:
+    return [entry["file"] for entry in read(locales / ".i18n-ai-fallbacks.json")["fallbacks"]]
+
+
+async def record_a_file_then_remove_it(locales: Path) -> None:
+    """Fallbacks recorded in `it/common.json` and `it/gone.json`, whose source is then removed."""
+    shutil.copy(locales / "en" / "common.json", locales / "en" / "gone.json")
+    await generate(Stubborn(), TreeRequest(locales / "en", include=("*.json",)), "it")
+    assert recorded_files(locales) == ["it/common.json", "it/gone.json"]
+    (locales / "en" / "gone.json").unlink()
+
+
+async def test_a_removed_source_file_leaves_the_record(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    await record_a_file_then_remove_it(locales)
+
+    await generate(FakeGateway(), TreeRequest(locales / "en", include=("common.json",)), "it")
+
+    assert not (locales / ".i18n-ai-fallbacks.json").exists()
+
+
+async def test_a_removed_locale_leaves_the_record(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    tree = TreeRequest(locales / "en", include=("common.json",))
+    await generate(Stubborn(), tree, "it", "de")
+    shutil.rmtree(locales / "de")
+
+    await generate(Stubborn(), tree, "it")
+
+    assert recorded_files(locales) == ["it/common.json"]
+
+
+async def test_a_run_that_writes_nothing_still_drops_what_has_no_target(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    await record_a_file_then_remove_it(locales)
+
+    (failed,) = await generate(
+        Unreachable(), TreeRequest(locales / "en", include=("common.json",)), "it"
+    )
+
+    assert failed.status == ResultStatus.FAILED
+    assert recorded_files(locales) == ["it/common.json"]
+
+
+async def test_a_locale_outside_the_run_and_an_excluded_file_keep_their_entries(
+    examples: Path,
+) -> None:
+    locales = examples / "i18next" / "locales"
+    shutil.copy(locales / "en" / "common.json", locales / "en" / "kept.json")
+    await generate(Stubborn(), TreeRequest(locales / "en", include=("*.json",)), "it")
+
+    await generate(FakeGateway(), TreeRequest(locales / "en", exclude=("kept.json",)), "de")
+
+    assert recorded_files(locales) == ["it/common.json", "it/kept.json"]
+
+
+async def test_a_run_with_nothing_to_drop_or_record_leaves_the_record_untouched(
+    examples: Path,
+) -> None:
+    locales = examples / "i18next" / "locales"
+    tree = TreeRequest(locales / "en", include=("common.json",))
+    await generate(Stubborn(), tree, "it")
+    record = locales / ".i18n-ai-fallbacks.json"
+    before = (record.read_bytes(), record.stat().st_ino, record.stat().st_mtime_ns)
+
+    await generate(FakeGateway(), tree, "de")
+
+    assert (record.read_bytes(), record.stat().st_ino, record.stat().st_mtime_ns) == before
+
+
+async def test_the_dropped_entries_are_logged(
+    examples: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    locales = examples / "i18next" / "locales"
+    await record_a_file_then_remove_it(locales)
+    tree = TreeRequest(locales / "en", include=("common.json",))
+
+    with caplog.at_level(logging.INFO, logger="i18n_ai"):
+        await generate(Stubborn(), tree, "it")
+        await generate(Stubborn(), tree, "it")
+
+    dropped = [record.getMessage() for record in caplog.records if "dropped" in record.message]
+    assert dropped == ["dropped 1 fallback record entries with no target: it/gone.json"]
+
+
 async def test_a_bundle_s_record_names_its_locale(examples: Path) -> None:
     bundle = examples / "bundle" / "i18n.json"
     await generate(Stubborn("%{name}"), TreeRequest(bundle), "fr")
@@ -576,3 +663,16 @@ async def test_the_precheck_counts_a_recorded_fallback_as_to_translate(
 
     (file,) = report.targets[0].files
     assert (file.to_translate, file.exists) == (1, True)
+
+
+async def test_a_mixed_tree_with_a_format_excluded_is_still_generated(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    (locales / "en" / "extra.yml").write_text("greeting: Hello\n")
+
+    results = await generate(
+        FakeGateway(),
+        TreeRequest(locales / "en", include=("common.json",), exclude=("*.yml",)),
+        "it",
+    )
+
+    assert [result.status for result in results] == [ResultStatus.WRITTEN]

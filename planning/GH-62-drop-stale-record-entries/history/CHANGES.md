@@ -1,0 +1,11 @@
+- 2026-11-09: created from the follow-up GH-15/follow-ups/2026-11-04_1058_generate-drops-stale-record-entries.md; decision 001.
+- 2026-11-09: decision 002.
+- 2026-11-09: decision 003.
+- 2026-11-09: draft.md written, status drafted.
+- 2026-11-10: issue #62 created, on board 4 (Todo); status tracked; folder renamed to GH-62-drop-stale-record-entries.
+- 2026-11-10: ticket pass; decision 004.
+- 2026-11-10: decision 005.
+- 2026-11-10: draft.md, out of scope: another format's entries (decision 005).
+- 2026-11-10: impl.md written, status planned.
+- 2026-11-10: branch fix/62-drop-stale-record-entries, status building, #62 In Progress.
+- 2026-11-10: impl.md, corrections while building (the second scan keeps the format).

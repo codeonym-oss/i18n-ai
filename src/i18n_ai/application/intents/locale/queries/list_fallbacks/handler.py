@@ -3,15 +3,8 @@ from pathlib import PurePosixPath
 
 from mediary.cqrs import QueryHandler, query_handler
 
-from ......domain.exports.locale import (
-    LocaleCode,
-    LocaleSchema,
-    SourceFile,
-    TargetLocation,
-    extract_schema,
-    qualify,
-)
-from .....common import record_target
+from ......domain.exports.locale import LocaleSchema, extract_schema
+from .....common import record_targets
 from .....ports.locale import IFallbackRecord, ILocaleStore, ILocaleTreeScanner, MessageRef
 from .query import ListFallbacksQuery
 from .view import FallbacksView, FallbackView
@@ -38,18 +31,7 @@ class ListFallbacksQueryHandler(QueryHandler[ListFallbacksQuery, FallbacksView])
             return FallbacksView(())
 
         # 1. The targets the record may name, by their place in it
-        targets: dict[_Place, tuple[SourceFile, LocaleCode, TargetLocation]] = {}
-        for file in tree.files:
-            if not qualify(file.document, file.error).qualifies:
-                continue
-            for locale in tree.existing:
-                if not locale.same_as(tree.source):
-                    location = tree.target_location(locale, file)
-                    targets[record_target(tree.target_directory, location)] = (
-                        file,
-                        locale,
-                        location,
-                    )
+        targets = record_targets(tree)
 
         # 2. Each entry's message, its source text and its current one
         schemas: dict[_Place, LocaleSchema] = {}

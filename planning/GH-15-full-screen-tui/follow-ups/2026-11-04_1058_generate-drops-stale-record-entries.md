@@ -17,3 +17,5 @@ Left for later because the story keeps the CLI's behaviour as it is, but for tra
 
 Fixing it: when `generate` writes a target, drop that target's entries whose path is no longer in its schema; and
 decide whether entries for a file or locale outside the run are dropped (they may only be excluded from this run).
+
+Taken up by GH-62 (`planning/GH-62-drop-stale-record-entries/`).

@@ -65,7 +65,8 @@ It keeps its source text, so that its document is whole, and is listed at the en
 The run also records it in `.i18n-ai-fallbacks.json`, in the directory the targets are written
 to: the file, the message's key, the rules it broke and the model's last answer. The next run
 translates a recorded message again, rather than keeping its source text as a translation, and
-takes it off the record once it passes. Commit the record with your locales, so that every clone
+takes it off the record once it passes. A message whose source file or locale is gone leaves the
+record on the next run too. Commit the record with your locales, so that every clone
 and CI run knows which messages are still in their source text. A tree with no fallbacks left has
 no record.
 
