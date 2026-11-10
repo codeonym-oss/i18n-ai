@@ -1,0 +1,4 @@
+- 2026-11-10: tracked as GH-68 (#68).
+- 2026-11-10: ticket pass: decisions 001–006, draft updated (syrupy for the snapshots, the settled questions), impl.md written; planned.
+- 2026-11-10: building on feat/68-aurora-shell-and-home.
+- 2026-11-10: impl.md: corrections while building (locale_tree, no KeyHints, @on handlers, Trees.request, test helpers).

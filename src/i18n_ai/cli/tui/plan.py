@@ -1,15 +1,15 @@
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Footer, Header, Static
+from textual.widgets import Static
 
 from ...application.exports.locale import ScanReport, TargetFileView
 from ...domain.exports.locale import LocaleCode
 from ..common.setup import Planned, planned
 from .grid import JobGrid
+from .kit.shell import ShellScreen
 
 
-class PlanScreen(Screen[Planned | None]):
+class PlanScreen(ShellScreen[Planned | None]):
     """What a run will do, file by file and locale by locale, before it starts: each cell new,
     fill or up to date with its messages to translate, or turned off. A cell, a row or a column
     turns off; Run gives the targets, the files left out and the cells skipped."""
@@ -26,6 +26,7 @@ class PlanScreen(Screen[Planned | None]):
         Binding("ctrl+r", "run", "Run"),
         Binding("b,escape", "back", "Back"),
     ]
+    SECTION = "run"
 
     def __init__(self, report: ScanReport) -> None:
         super().__init__()
@@ -37,15 +38,13 @@ class PlanScreen(Screen[Planned | None]):
         self._left_out = [file for file in report.files if not file.qualifies]
         self._off: set[tuple[str, str]] = set()
 
-    def compose(self) -> ComposeResult:
-        yield Header()
+    def body(self) -> ComposeResult:
         yield JobGrid(self._files, self._targets, self._label, id="grid")
         yield Static(
             "\n".join(f"Left out: {file.name} — {file.reason}" for file in self._left_out),
             id="left-out",
         )
         yield Static("", id="total")
-        yield Footer()
 
     def on_mount(self) -> None:
         self.query_one("#left-out").display = bool(self._left_out)

@@ -1,0 +1,2 @@
+- 2026-11-10: grilled (decisions 001–007), drafted the story and its six tickets.
+- 2026-11-10: tracked as GH-67 (#67).

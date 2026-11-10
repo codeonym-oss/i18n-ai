@@ -1,0 +1,51 @@
+/* The frame every screen sits in, and the kit's pieces, in the aurora theme. */
+
+Screen { background: $background; }
+
+/* The shell */
+#frame { height: 1fr; }
+#sidebar {
+    width: 24; height: 1fr; padding: 1 1; background: $panel;
+    border-right: vkey $border-blurred;
+}
+#sidebar > .option-list--option-highlighted { background: $border-blurred; color: $foreground; text-style: bold; }
+ShellScreen.-narrow #sidebar { width: 6; padding: 1 0 1 1; }
+#main { width: 1fr; }
+#command-bar { height: 1; padding: 0 2; background: $background; }
+#crumb { width: auto; }
+#palette { width: auto; margin-left: 3; color: $text-muted; }
+#switcher { dock: right; width: 40; }
+#body { height: 1fr; padding: 0 1; }
+#notice { display: none; width: 1fr; height: 1fr; content-align: center middle; color: $warning; }
+ShellScreen.-small #body { display: none; }
+ShellScreen.-small #notice { display: block; }
+#status { height: 1; background: $panel; }
+#status-tree { width: auto; padding: 0 2; color: $text-muted; }
+#status Footer { dock: none; width: 1fr; background: $panel; }
+
+/* Cards and figures */
+.card {
+    height: auto; padding: 0 1; background: $surface;
+    border: round $border; border-title-color: $foreground; border-title-style: bold;
+}
+.kpi { width: 1fr; }
+.kpi-label { color: $text-muted; text-style: bold; }
+.kpi-value { text-style: bold; }
+.kpi-value.-warning { color: $warning; }
+.kpi-note { color: $text-muted; }
+
+/* Chips */
+.chip { width: auto; padding: 0 1; text-style: bold; color: $background; }
+.chip.-primary { background: $primary; }
+.chip.-secondary { background: $secondary; }
+.chip.-accent { background: $accent; }
+.chip.-warning { background: $warning; }
+.chip.-error { background: $error; }
+
+/* The heat scale */
+.heat { width: 1fr; padding: 0 1; text-style: bold; }
+.heat.-heat-0 { background: $heat-0; color: $heat-0-text; }
+.heat.-heat-1 { background: $heat-1; color: $heat-1-text; }
+.heat.-heat-2 { background: $heat-2; color: $heat-2-text; }
+.heat.-heat-3 { background: $heat-3; color: $heat-3-text; }
+.heat.-heat-4 { background: $heat-4; color: $heat-4-text; }

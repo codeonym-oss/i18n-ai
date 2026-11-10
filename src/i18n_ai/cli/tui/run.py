@@ -5,8 +5,7 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
-from textual.screen import Screen
-from textual.widgets import Footer, Header, Log, ProgressBar, Static
+from textual.widgets import Log, ProgressBar, Static
 
 from ...application.exports.locale import (
     FileDropped,
@@ -22,11 +21,12 @@ from ...application.exports.locale import (
 from ..common.setup import Planned
 from ..rendering import render_receipt
 from .grid import JobGrid
+from .kit.shell import ShellScreen
 from .plan import count
 from .progress import TuiProgress
 
 
-class RunScreen(Screen[None]):
+class RunScreen(ShellScreen[None]):
     """A generation as it runs: the plan's grid, each cell's atom live (waiting, translating,
     retrying, then what became of it), a bar, and the problems as they come; then its receipt,
     and the command that runs it again."""
@@ -42,23 +42,27 @@ class RunScreen(Screen[None]):
         Binding("b", "back", "Back to setup"),
         Binding("q", "app.quit", "Quit"),
     ]
+    SECTION = "run"
 
-    def __init__(self, report: ScanReport, plan: Planned) -> None:
+    def __init__(self, report: ScanReport, plan: Planned, tree: str) -> None:
         super().__init__()
+        self._tree = tree
         self.done = False
         self._files = [file.name for file in report.qualified]
         self._locales = [target.locale for target in report.targets]
         self._off = plan.off
-        self._review: Callable[[], Screen[None]] | None = None
+        self._review: Callable[[], None] | None = None
 
-    def compose(self) -> ComposeResult:
-        yield Header()
+    def body(self) -> ComposeResult:
         with VerticalScroll():
             yield JobGrid(self._files, self._locales, self._label, id="grid", cursor=False)
             yield ProgressBar(id="progress", show_eta=False)
             yield Log(id="problems")
             yield Static("", id="receipt")
-        yield Footer()
+
+    def status_tree(self) -> str:
+        # A run keeps the tree it started on, whichever the app is on
+        return self._tree
 
     def on_mount(self) -> None:
         self.query_one("#problems").border_title = "Problems"
@@ -105,7 +109,7 @@ class RunScreen(Screen[None]):
         receipt: GenerationReceipt,
         again: str,
         note: str | None = None,
-        review: Callable[[], Screen[None]] | None = None,
+        review: Callable[[], None] | None = None,
     ) -> None:
         """The table the CLI prints, and the command that runs it again without the TUI, with
         `note` saying where it differs from the run; `review` opens the review of the fallbacks
@@ -141,7 +145,7 @@ class RunScreen(Screen[None]):
 
     def action_review(self) -> None:
         if self._review is not None:
-            self.app.push_screen(self._review())
+            self._review()
 
     def action_back(self) -> None:
         self.dismiss()

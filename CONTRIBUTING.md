@@ -156,6 +156,17 @@ needs a `PlaceholderStyle`, its pattern, its line in the prompt's `_STYLES`
 (`infra/adapters/langgraph/prompts.py`), and tests in `tests/domain/test_placeholders.py` that a
 translation losing, adding or altering it is rejected.
 
+### TUI snapshots
+
+`tests/tui/test_snapshots.py` compares each screen with its SVG under `tests/tui/__snapshots__/`,
+as Textual exports it. A change to how a screen looks fails there, and so does a Textual or Rich
+upgrade, Dependabot's included, since each version draws a little differently. Write them again,
+open the new SVGs to check they look right, and commit them with the change:
+
+```bash
+uv run pytest tests/tui/test_snapshots.py --snapshot-update
+```
+
 ## Documentation
 
 The docs site is built with [Sphinx](https://www.sphinx-doc.org/), the
