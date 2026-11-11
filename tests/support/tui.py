@@ -12,7 +12,7 @@ from textual.widgets import Input, Select
 from i18n_ai.application.exports.locale import GenerateLocalesCommand, GenerationOptions
 from i18n_ai.application.ports.locale import TreeRequest
 from i18n_ai.cli.tui import I18nAiApp
-from i18n_ai.cli.tui.kit.widgets import LocaleCard
+from i18n_ai.cli.tui.kit.widgets import LocaleCard, PlanCell
 from i18n_ai.cli.tui.plan import PlanScreen
 from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.di.container import build_container
@@ -42,6 +42,14 @@ async def settle(pilot: Pilot[None]) -> None:
 async def pick(pilot: Pilot[None], selector: str, value: str) -> None:
     pilot.app.screen.query_one(selector, Select).value = value
     await settle(pilot)
+
+
+async def on_cell(pilot: Pilot[None], plan: PlanScreen, row: int, column: int, key: str) -> None:
+    """`key` pressed on the plan's cell of the `row`th file and the `column`th locale."""
+    cell = list(plan.query(PlanCell))[row * len(plan.query(".column-head")) + column]
+    cell.focus()
+    await pilot.press(key)
+    await pilot.pause()
 
 
 async def ended(pilot: Pilot[None], seconds: float = 10) -> RunScreen:

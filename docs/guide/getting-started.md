@@ -52,9 +52,12 @@ shows each file in each locale, before anything is sent to a model:
 ![The plan of a run, one cell turned off](tui-plan.svg)
 
 A cell is **new** (no target file yet) or **fill** (a target exists) with the messages it will
-translate, **up to date** when there is nothing to translate, or **off**. `Space` turns the cell
-under the cursor off or on, `r` its whole row (a file), `c` its whole column (a locale). The
-files left out are listed with their reason, and the line under the grid totals what is on.
+translate, **up to date** when there is nothing to translate, or **off**. Its strip is the file's
+messages: the ones to translate, the recorded fallbacks among them, and the ones kept. The arrows
+move between cells; `Space` turns the cell off or on, `r` its whole row (a file), `c` its whole
+column (a locale). The inspector shows the cell you are on: its counts, the file it writes, and its
+recorded fallbacks. Under the grid, the files left out with their reason; the run bar totals the
+messages, the agents and the calls to the model of the cells on.
 
 `Ctrl+R` again runs it: no other question. The run screen keeps the plan's grid, and each cell
 follows its file and locale live: waiting, translating, **retry 2/3** when the model's answer

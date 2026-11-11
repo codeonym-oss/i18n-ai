@@ -7,42 +7,25 @@ from pathlib import Path
 
 import pytest
 from textual.content import Content
-from textual.coordinate import Coordinate
 from textual.pilot import Pilot
 from textual.widgets import ContentSwitcher, DataTable, Input, Log, Select, Static
 from textual.widgets.select import InvalidSelectValueError
 
-from i18n_ai.application.exports.locale import (
-    ScanReport,
-    SourceFileView,
-    TargetView,
-)
 from i18n_ai.cli.tui.confirm import ConfirmScreen
 from i18n_ai.cli.tui.grid import JobGrid
 from i18n_ai.cli.tui.kit.widgets import LocaleCard
-from i18n_ai.cli.tui.plan import PlanScreen
 from i18n_ai.cli.tui.review import EditScreen, ReviewScreen
 from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.cli.tui.setup import SetupScreen
 from support.fakes import FakeGateway, InstalledCatalog
-from support.tui import ended, fallen, pick, planning, ready, running, settle, tui
+from support.tui import ended, fallen, on_cell, pick, planning, ready, running, settle, tui
 
 
-def cells(screen: PlanScreen | RunScreen) -> list[list[str]]:
+def cells(screen: RunScreen) -> list[list[str]]:
     """The grid, its header first."""
     grid = screen.query_one(DataTable)
     header = [str(column.label) for column in grid.columns.values()]
     return [header] + [[str(cell) for cell in grid.get_row_at(i)] for i in range(grid.row_count)]
-
-
-def total(screen: PlanScreen) -> str:
-    return str(screen.query_one("#total", Static).content)
-
-
-async def on_cell(pilot: Pilot[None], screen: PlanScreen, row: int, column: int, key: str) -> None:
-    screen.query_one(DataTable).cursor_coordinate = Coordinate(row, column)
-    await pilot.press(key)
-    await pilot.pause()
 
 
 def text(screen: RunScreen) -> str:
@@ -231,146 +214,6 @@ async def test_every_field_fits_80_columns(isolated: Path) -> None:
                 assert 0 < field.region.bottom <= 24, (step, selector)
 
 
-async def test_the_plan_shows_each_file_and_locale(isolated: Path, vault: object) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(100, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot, "de")
-
-        plan = await planning(pilot)
-
-        assert cells(plan) == [
-            ["File", "fr", "de"],
-            ["auth/login.json", "new 10", "new 9"],
-            ["common.json", "fill 13", "new 15"],
-        ]
-        assert total(plan) == "4 agents · 47 messages"
-        assert "Left out: meta.json" in str(plan.query_one("#left-out", Static).content)
-
-
-async def test_a_cell_a_row_or_a_column_turns_off(isolated: Path, vault: object) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(100, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot, "de")
-        plan = await planning(pilot)
-
-        await on_cell(pilot, plan, 1, 2, "space")
-        assert cells(plan)[2] == ["common.json", "fill 13", "off"]
-        assert total(plan) == "3 agents · 32 messages"
-
-        await on_cell(pilot, plan, 0, 1, "c")
-        assert cells(plan)[1:] == [
-            ["auth/login.json", "off", "new 9"],
-            ["common.json", "off", "off"],
-        ]
-
-        await on_cell(pilot, plan, 1, 0, "r")  # all off already: back on
-        assert cells(plan)[2] == ["common.json", "fill 13", "new 15"]
-        assert total(plan) == "3 agents · 37 messages"
-        await on_cell(pilot, plan, 0, 0, "r")
-        assert cells(plan)[1] == ["auth/login.json", "off", "off"]
-
-
-async def test_the_plan_runs_nothing_with_every_cell_off(isolated: Path, vault: object) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(100, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot)
-        plan = await planning(pilot)
-
-        await on_cell(pilot, plan, 0, 1, "c")
-        await pilot.press("ctrl+r")
-        await pilot.pause()
-
-        assert app.screen is plan
-        assert any("Every cell is off" in str(n.message) for n in app._notifications)
-
-        await pilot.press("b")
-        await settle(pilot)
-        assert isinstance(app.screen, SetupScreen)
-
-
-async def test_a_cell_turned_off_is_not_written(isolated: Path, vault: object) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(120, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot, "de")
-        plan = await planning(pilot)
-
-        await on_cell(pilot, plan, 1, 2, "space")
-        await pilot.press("ctrl+r")
-        run = await ended(pilot)
-
-        assert (isolated / "locales/de/auth/login.json").is_file()
-        assert not (isolated / "locales/de/common.json").exists()
-        receipt = text(run)
-        assert "To run it again: i18n-ai generate locales -t fr,de -m openai:fake-model" in receipt
-        assert "1 single cell was off; this command runs it too." in receipt
-
-
-async def test_a_row_off_is_excluded_in_the_command(isolated: Path, vault: object) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(140, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot)
-        plan = await planning(pilot)
-
-        await on_cell(pilot, plan, 1, 0, "r")
-        await pilot.press("ctrl+r")
-        run = await ended(pilot)
-
-        receipt = text(run)
-        assert "-m openai:fake-model --exclude common.json" in receipt
-        assert "single cell" not in receipt
-        assert cells(run)[1:] == [
-            ["auth/login.json", "written"],
-            ["common.json", "off"],
-        ]
-
-
-async def test_the_plan_fits_80_columns(isolated: Path, vault: object) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(80, 24)) as pilot:
-        await running(pilot)
-        await ready(pilot, "de", "es", "it", "ja")
-        plan = await planning(pilot)
-
-        for selector in ("#grid", "#total", "Footer"):
-            field = plan.query_one(selector)
-            assert field.region.width > 0, selector
-            assert field.region.right <= 80, selector
-            assert 0 < field.region.bottom <= 24, selector
-
-
-async def test_a_plan_with_no_file_takes_its_keys(isolated: Path) -> None:
-    report = ScanReport(
-        root=isolated,
-        layout="directory",
-        format="json",
-        source="en",
-        source_name="English",
-        source_path=isolated,
-        output=isolated,
-        existing=("en",),
-        files=(SourceFileView("meta.json", isolated, False, "it looks like data", 0),),
-        targets=(TargetView("fr", "French", "ltr", True, ()),),
-    )
-    app = tui(isolated)
-    async with app.run_test(size=(100, 40)) as pilot:
-        await running(pilot)
-        plan = PlanScreen(report)
-        await app.push_screen(plan)
-        await pilot.pause()
-
-        for key in ("space", "r", "c", "ctrl+r"):
-            await pilot.press(key)
-            await pilot.pause()
-
-        assert app.screen is plan
-        assert total(plan) == "0 agents · 0 messages"
-
-
 async def test_a_retry_shows_in_its_cell_as_it_happens(
     isolated: Path, vault: object, gateway: FakeGateway, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -420,7 +263,7 @@ async def test_the_run_shows_waiting_cells_and_the_ones_off(isolated: Path, vaul
         await running(pilot)
         await ready(pilot, "de")
         plan = await planning(pilot)
-        await on_cell(pilot, plan, 1, 2, "space")
+        await on_cell(pilot, plan, 1, 1, "space")
 
         await pilot.press("ctrl+r")
         run = await ended(pilot)

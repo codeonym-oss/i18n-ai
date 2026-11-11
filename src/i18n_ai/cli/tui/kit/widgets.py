@@ -1,10 +1,12 @@
 from rich.markup import escape
-from textual.app import ComposeResult
+from textual.app import ComposeResult, RenderResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Label, Static
+
+from .heat import strip
 
 
 class Card(Vertical):
@@ -79,6 +81,67 @@ class LocaleCard(Vertical, can_focus=True):
     def on_click(self) -> None:
         self.focus()
         self.action_pick()
+
+
+class PlanCell(Vertical, can_focus=True):
+    """A file in a locale, in the plan: its state's tag, whether it is on, the messages it will
+    translate, and the strip of its file's messages. The arrows post `Moved`."""
+
+    BINDINGS = [
+        Binding("up", "move(0, -1)", show=False),
+        Binding("down", "move(0, 1)", show=False),
+        Binding("left", "move(-1, 0)", show=False),
+        Binding("right", "move(1, 0)", show=False),
+    ]
+    # A state: its words, and what the cell shows for its number
+    WORDS = {"new": "new", "fill": "fill", "done": "up to date", "off": "off"}
+    NUMBERS = {"done": "✓", "off": "—"}
+
+    class Moved(Message):
+        def __init__(self, cell: "PlanCell", columns: int, rows: int) -> None:
+            super().__init__()
+            self.cell, self.columns, self.rows = cell, columns, rows
+
+    def __init__(self, file: str, locale: str) -> None:
+        super().__init__(classes="plan-cell")
+        self.file, self.locale = file, locale
+        self.text = ""
+
+    def compose(self) -> ComposeResult:
+        with Horizontal(classes="cell-head"):
+            yield Static(classes="cell-tag")
+            yield Static(classes="cell-short")
+            yield Static(classes="cell-mark")
+        yield Static(classes="cell-number")
+        yield _Strip()
+
+    def show(self, state: str, to_translate: int, fallbacks: int, kept: int) -> None:
+        """`state` is new, fill, done (up to date) or off; `text` says it as the plan reads."""
+        for name in self.WORDS:
+            self.set_class(name == state, f"-{name}")
+        number = self.NUMBERS.get(state, str(to_translate))
+        self.text = self.WORDS[state] + ("" if state in self.NUMBERS else f" {to_translate}")
+        self.query_one(".cell-tag", Static).update(self.WORDS[state].upper())
+        self.query_one(".cell-short", Static).update(number)
+        self.query_one(".cell-mark", Static).update("□" if state == "off" else "■")
+        self.query_one(".cell-number", Static).update(number)
+        self.query_one(_Strip).counts = (to_translate, fallbacks, kept, state == "off")
+        self.query_one(_Strip).refresh()
+
+    def action_move(self, columns: int, rows: int) -> None:
+        self.post_message(self.Moved(self, columns, rows))
+
+
+class _Strip(Widget):
+    """A cell's strip, drawn at its width."""
+
+    def __init__(self) -> None:
+        super().__init__(classes="cell-strip")
+        self.counts = (0, 0, 0, False)
+
+    def render(self) -> RenderResult:
+        to_translate, fallbacks, kept, off = self.counts
+        return strip(self.size.width, to_translate, fallbacks, kept, off)
 
 
 class ModelCard(Static):

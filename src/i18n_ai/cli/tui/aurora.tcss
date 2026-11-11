@@ -28,6 +28,8 @@ ShellScreen.-small #notice { display: block; }
     height: auto; padding: 0 1; background: $surface;
     border: round $border; border-title-color: $foreground; border-title-style: bold;
 }
+.card.-fill { height: 1fr; }
+.card.-accent { border: round $primary 50%; border-title-color: $primary; }
 .kpi { width: 1fr; }
 .kpi-label { color: $text-muted; text-style: bold; }
 .kpi-value { text-style: bold; }
@@ -66,3 +68,33 @@ ShellScreen.-small #notice { display: block; }
 
 /* The model card */
 .model-card { height: auto; }
+
+/* Plan cells */
+.plan-cell { height: 5; padding: 0 1; background: $surface; border: round $border; }
+.plan-cell.-new { background: $secondary 8%; border: round $secondary 40%; }
+.plan-cell.-fill { background: $warning 6%; border: round $warning 30%; }
+.plan-cell.-done { background: $success 6%; border: round $success 30%; }
+.plan-cell.-off { background: $panel; border: dashed $border-strong; }
+.plan-cell:focus { border: heavy $primary; }
+.cell-head { height: 1; }
+.cell-tag { width: auto; padding: 0 1; text-style: bold; }
+.plan-cell.-new .cell-tag { background: $secondary 20%; color: $secondary; }
+.plan-cell.-fill .cell-tag { background: $warning 20%; color: $warning; }
+.plan-cell.-done .cell-tag { background: $success 20%; color: $success; }
+.plan-cell.-off .cell-tag { background: $border-blurred; color: $text-muted; }
+.cell-short { display: none; width: auto; margin-left: 1; text-style: bold; }
+.cell-mark { width: 1fr; text-align: right; color: $primary; }
+.plan-cell.-off .cell-mark { color: $text-muted; }
+.cell-number { text-style: bold; }
+.plan-cell.-done .cell-number { color: $success; }
+.plan-cell.-off .cell-number { color: $text-muted; }
+.cell-strip { height: 1; }
+ShellScreen.-narrow .plan-cell { height: 4; }
+
+/* The plan's headers and run bar */
+.column-head { background: $panel; border: round $border-blurred; }
+ShellScreen.-narrow .column-head { border: none; }
+#run-bar { background: $panel; border: round $border; }
+ShellScreen.-narrow #run-bar { border: none; }
+ShellScreen.-narrow .cell-number { display: none; }
+ShellScreen.-narrow .cell-short { display: block; }
