@@ -4,6 +4,11 @@ from textual.widgets import Static
 _STEPS = (0, 39, 74, 99)
 
 
+def percent(part: int, whole: int) -> int:
+    """`part` of `whole`, rounded down: 100 only when nothing is left."""
+    return part * 100 // whole if whole else 0
+
+
 def shade(percent: int) -> int:
     """The step of the heat scale, 0 to 4, that `percent` takes."""
     return next((step for step, top in enumerate(_STEPS) if percent <= top), len(_STEPS))

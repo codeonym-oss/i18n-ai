@@ -28,14 +28,25 @@ where the fallbacks are edited, retried or accepted; `b` leaves it for the secti
 A project with several trees has a switcher at the top right: it picks the tree Home, the review
 and a new run are on; a run going keeps its own.
 
-**Run** opens a form on the tree Home shows. It offers every CLDR locale (the ones already in
-the tree checked; type to search), lists the providers with the ones ready to use first, and reads the
-chosen provider's model list from its API, the recommended models first. A field waits until
-what it depends on is set: the model for its provider, the targets for their tree. A missing API
-key is asked for, hidden, and used for that run; it is saved in the system keyring only if you
-tick the box. The line beside **Plan** says how many files and locales the run covers.
+**Run** sets up a run in three steps, on the tree Home shows: **Tree** (the tree, its source when
+the tree cannot tell it, where the new locales go), **Targets** and **Model**. It opens on
+Targets, with your last answers filled in; on Tree when no tree was found (type its path) or
+the tree cannot tell its source. A step's chip at the top opens it, **Continue** the
+next one, `Esc` the previous one.
 
-`Ctrl+R` plans it, after asking to install the provider's package if it is missing. The plan
+Targets shows the locales as cards: each says its direction and what a run would do, how much is
+translated for a locale already in the tree, how many messages a new one needs. The ones in the
+tree come first, picked. `/` searches every CLDR locale, the chips above narrow the cards to
+those in the tree, those written right to left or those picked, and `Space` or a click picks a
+card. Model lists the providers with the ones ready to use first, and reads the chosen
+provider's model list from its API, the recommended models first. A field waits until what it
+depends on is set: the model for its provider, the targets for their tree. A missing API key is
+asked for, hidden, and used for that run; it is saved in the system keyring only if you tick the
+box. Beside the steps, **This run** shows the locales picked, how many files, locales and
+messages the run covers, and the model.
+
+`Ctrl+R` plans it from any step; when something is missing, it opens the step that lacks it. It
+plans after asking to install the provider's package if it is missing. The plan
 shows each file in each locale, before anything is sent to a model:
 
 ![The plan of a run, one cell turned off](tui-plan.svg)
@@ -49,7 +60,7 @@ files left out are listed with their reason, and the line under the grid totals 
 follows its file and locale live: waiting, translating, **retry 2/3** when the model's answer
 broke a rule and goes back to it, then written, partial (with fallbacks: messages left in their
 source text), failed or ignored. Under it, a bar, and **Problems**: each failed or partial file
-as it comes. Then the receipt, and the one-line command that repeats the run without the form.
+as it comes. Then the receipt, and the one-line command that repeats the run without the setup.
 A file turned off is an `--exclude` in that command, a locale turned off is not among its
 targets; single cells have no option of their own, so the receipt says when the command runs them too.
 `b` goes back, `q` quits, `Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.

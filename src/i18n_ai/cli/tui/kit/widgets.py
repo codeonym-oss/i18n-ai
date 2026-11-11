@@ -1,6 +1,8 @@
 from rich.markup import escape
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.binding import Binding
+from textual.containers import Horizontal, Vertical
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Label, Static
 
@@ -34,3 +36,75 @@ class Chip(Static):
 
     def __init__(self, glyph: str, word: str, tone: str, id: str | None = None) -> None:
         super().__init__(f"{glyph} {word}", id=id, classes=f"chip -{tone}")
+
+
+class LocaleCard(Vertical, can_focus=True):
+    """A target locale to pick: its code, its direction, its name, and what a run would do
+    with it; Space, Enter or a click toggles it."""
+
+    BINDINGS = [Binding("space,enter", "pick", "Pick")]
+
+    class Toggled(Message):
+        def __init__(self, card: "LocaleCard") -> None:
+            super().__init__()
+            self.card = card
+
+    def __init__(
+        self, code: str, name: str, direction: str, state: str, in_tree: bool, picked: bool
+    ) -> None:
+        super().__init__(classes="locale-card")
+        self.code, self.locale_name, self.state = code, name, state
+        self.direction = direction.upper()
+        self.in_tree, self.picked = in_tree, picked
+        self.set_class(picked, "-picked")
+
+    def compose(self) -> ComposeResult:
+        with Horizontal(classes="locale-head"):
+            yield Static(f"[b]{escape(self.code)}[/b]", classes="locale-code")
+            yield Static(self.direction, classes="locale-direction")
+            yield Static(self._check(), classes="locale-check")
+        yield Static(escape(self.locale_name), classes="locale-name")
+        tone = "-tree" if self.in_tree else "-new"
+        yield Static(escape(self.state), classes=f"locale-state {tone}")
+
+    def _check(self) -> str:
+        return "■" if self.picked else "□"
+
+    def action_pick(self) -> None:
+        self.picked = not self.picked
+        self.set_class(self.picked, "-picked")
+        self.query_one(".locale-check", Static).update(self._check())
+        self.post_message(self.Toggled(self))
+
+    def on_click(self) -> None:
+        self.focus()
+        self.action_pick()
+
+
+class ModelCard(Static):
+    """The run's model: its provider, the model, and its key's state."""
+
+    def __init__(self, id: str | None = None) -> None:
+        super().__init__(id=id, classes="model-card")
+        self.text = ""
+        self.show(None, None, "", False, False)
+
+    def show(
+        self,
+        provider: str | None,
+        model: str | None,
+        key: str,
+        needs_key: bool,
+        recommended: bool,
+    ) -> None:
+        """`key` says the key's state; `needs_key` when one is still to be given."""
+        if provider is None:
+            self.text = "no model yet"
+            self.update(f"[$text-muted]○ {self.text}[/]")
+            return
+        picked = escape(model) if model else "[$text-muted]pick a model[/]"
+        self.text = f"{provider} / {model or '…'}" + (f" · {key}" if key else "")
+        tone = "$warning" if needs_key or not model else "$success"
+        star = "  [$accent]★ recommended[/]" if recommended else ""
+        line = f"[{tone}]●[/] [b]{escape(provider)}[/b] / {picked}{star}"
+        self.update(f"{line}\n[$text-muted]{escape(key)}[/]" if key else line)

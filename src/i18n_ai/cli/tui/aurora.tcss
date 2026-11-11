@@ -49,3 +49,20 @@ ShellScreen.-small #notice { display: block; }
 .heat.-heat-2 { background: $heat-2; color: $heat-2-text; }
 .heat.-heat-3 { background: $heat-3; color: $heat-3-text; }
 .heat.-heat-4 { background: $heat-4; color: $heat-4-text; }
+
+/* Locale cards */
+.locale-card { height: 5; padding: 0 0 0 1; background: $surface; border: round $border; }
+.locale-card.-picked { background: $primary 12%; border: round $primary 60%; }
+.locale-card:focus { border: heavy $primary; }
+.locale-head { height: 1; }
+.locale-code { width: auto; }
+.locale-card.-picked .locale-code { color: $primary; }
+.locale-direction { width: auto; margin-left: 1; padding: 0 1; background: $border-blurred; color: $text-muted; }
+.locale-check { width: 1fr; text-align: right; color: $border-strong; }
+.locale-card.-picked .locale-check { color: $primary; }
+.locale-name, .locale-state { width: 1fr; text-wrap: nowrap; text-overflow: ellipsis; }
+.locale-state.-tree { color: $success; }
+.locale-state.-new { color: $secondary; }
+
+/* The model card */
+.model-card { height: auto; }

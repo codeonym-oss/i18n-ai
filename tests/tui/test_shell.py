@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from mediary import Mediator
-from textual.widgets import OptionList, Select, Static
+from textual.widgets import ContentSwitcher, OptionList, Select, Static
 
 from i18n_ai.application.exports.locale import ScanLocaleTreeQuery
 from i18n_ai.cli.tui.home import HomeScreen
@@ -230,6 +230,14 @@ async def test_the_switcher_moves_home_and_the_setup_but_not_a_run_going(
         assert isinstance(setup, SetupScreen)
         assert setup.query_one("#tree", Select).value == "i18next/locales"
         assert setup.query_one("#switcher", Select).value == "i18next/locales"
+        # Another tree from the command bar keeps the wizard on its step
+        await pilot.click("#step-model")
+        setup.query_one("#switcher", Select).value = "bundle/i18n.json"
+        await settle(pilot)
+        assert setup.query_one("#tree", Select).value == "bundle/i18n.json"
+        assert setup.query_one("#wizard", ContentSwitcher).current == "model-step"
+        setup.query_one("#switcher", Select).value = "i18next/locales"
+        await settle(pilot)
 
         gateway.hold = asyncio.Event()
         await ready(pilot)

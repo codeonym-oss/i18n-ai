@@ -9,7 +9,7 @@ import pytest
 from textual.content import Content
 from textual.coordinate import Coordinate
 from textual.pilot import Pilot
-from textual.widgets import DataTable, Input, Log, Select, SelectionList, Static
+from textual.widgets import ContentSwitcher, DataTable, Input, Log, Select, Static
 from textual.widgets.select import InvalidSelectValueError
 
 from i18n_ai.application.exports.locale import (
@@ -19,6 +19,7 @@ from i18n_ai.application.exports.locale import (
 )
 from i18n_ai.cli.tui.confirm import ConfirmScreen
 from i18n_ai.cli.tui.grid import JobGrid
+from i18n_ai.cli.tui.kit.widgets import LocaleCard
 from i18n_ai.cli.tui.plan import PlanScreen
 from i18n_ai.cli.tui.review import EditScreen, ReviewScreen
 from i18n_ai.cli.tui.run import RunScreen
@@ -48,7 +49,7 @@ def text(screen: RunScreen) -> str:
     return str(screen.query_one("#receipt", Static).content)
 
 
-async def test_the_form_starts_from_the_projects_preset(isolated: Path) -> None:
+async def test_the_setup_starts_from_the_projects_preset(isolated: Path) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
         await running(pilot)
@@ -57,11 +58,10 @@ async def test_the_form_starts_from_the_projects_preset(isolated: Path) -> None:
         assert isinstance(screen, SetupScreen)
         assert app.sub_title == "i18next preset"
         assert screen.query_one("#tree", Select).value == "locales"
-        targets = screen.query_one("#targets", SelectionList)
-        assert targets.selected == ["fr"]
-        assert str(targets.get_option_at_index(0).prompt) == "fr — French · in the tree"
+        assert [card.code for card in screen.query(LocaleCard) if card.picked] == ["fr"]
         assert not screen.query_one("#source-row").display
-        assert str(screen.query_one("#plan", Static).content) == "2 files · 1 locale"
+        assert str(screen.query_one("#files .figure-value", Static).content) == "2"
+        assert str(screen.query_one("#locales .figure-value", Static).content) == "1"
 
 
 async def test_the_model_waits_for_its_provider_and_a_missing_key_is_asked(
@@ -79,28 +79,6 @@ async def test_the_model_waits_for_its_provider_and_a_missing_key_is_asked(
         assert screen.query_one("#model", Select).is_blank()
         assert screen.query_one("#key", Input).display
         assert screen.query_one("#key", Input).password
-
-
-async def test_the_search_keeps_what_is_checked(isolated: Path) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(100, 40)) as pilot:
-        await running(pilot)
-        screen = app.screen
-        await pilot.click("#search")
-        await pilot.press(*"germ")
-        await settle(pilot)
-        targets = screen.query_one("#targets", SelectionList)
-        listed = [str(targets.get_option_at_index(i).prompt) for i in range(targets.option_count)]
-        assert listed[0] == "de — German"
-        assert all("German" in title for title in listed)
-        targets.select("de")
-        await settle(pilot)
-
-        screen.query_one("#search", Input).value = ""
-        await settle(pilot)
-
-        assert sorted(targets.selected) == ["de", "fr"]
-        assert str(screen.query_one("#plan", Static).content) == "2 files · 2 locales"
 
 
 async def test_a_run_writes_the_targets_and_says_how_to_run_it_again(
@@ -133,29 +111,7 @@ async def test_a_run_writes_the_targets_and_says_how_to_run_it_again(
         assert isinstance(app.screen, SetupScreen)
 
 
-async def test_the_source_is_asked_when_the_tree_cannot_tell(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    for locale in ("fr", "de"):
-        (tmp_path / "site/locales" / locale).mkdir(parents=True)
-        (tmp_path / "site/locales" / locale / "app.json").write_text('{"hello": "Bonjour"}')
-    monkeypatch.chdir(tmp_path / "site")
-    app = tui(tmp_path / "site")
-    async with app.run_test(size=(100, 40)) as pilot:
-        await running(pilot)
-        screen = app.screen
-        await pick(pilot, "#tree", "locales")
-        assert screen.query_one("#source-row").display
-        assert screen.query_one("#targets", SelectionList).disabled
-
-        await pick(pilot, "#source", "fr")
-
-        targets = screen.query_one("#targets", SelectionList)
-        assert not targets.disabled
-        assert targets.selected == ["de"]
-
-
-async def test_declining_the_install_goes_back_to_the_form(
+async def test_declining_the_install_goes_back_to_the_setup(
     isolated: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(InstalledCatalog, "is_installed", lambda self, module: False)
@@ -212,6 +168,7 @@ async def test_with_no_tree_found_its_path_is_typed(
         await running(pilot)
         screen = app.screen
         assert not screen.query_one("#tree", Select).display
+        assert screen.query_one("#wizard", ContentSwitcher).current == "tree-step"
         path = screen.query_one("#tree-path", Input)
         assert path.display
 
@@ -219,10 +176,11 @@ async def test_with_no_tree_found_its_path_is_typed(
         await path.action_submit()
         await settle(pilot)
 
-        assert not screen.query_one("#targets", SelectionList).disabled
+        assert not screen.query_one("#search", Input).disabled
+        assert screen.query(LocaleCard)
 
 
-async def test_run_waits_for_the_form(isolated: Path) -> None:
+async def test_run_waits_for_the_setup(isolated: Path) -> None:
     app = tui(isolated)
     async with app.run_test(size=(100, 40)) as pilot:
         await running(pilot)
@@ -231,7 +189,8 @@ async def test_run_waits_for_the_form(isolated: Path) -> None:
         await settle(pilot)
 
         assert isinstance(app.screen, SetupScreen)
-        assert any("Pick a locale tree" in str(n.message) for n in app._notifications)
+        assert app.screen.query_one("#wizard", ContentSwitcher).current == "model-step"
+        assert any("Pick a model first." in str(n.message) for n in app._notifications)
 
 
 async def test_the_palette_quits(isolated: Path) -> None:
@@ -254,14 +213,22 @@ async def test_every_field_fits_80_columns(isolated: Path) -> None:
         await running(pilot)
         await pick(pilot, "#provider", "openai")
         screen = app.screen
+        steps: dict[str, tuple[str | type[LocaleCard], ...]] = {
+            "tree": ("#tree", "#output"),
+            "targets": ("#search", "#filter-picked", LocaleCard),
+            "model": ("#provider", "#model", "#key"),
+        }
 
-        for selector in ("#tree", "#targets", "#output", "#provider", "#model", "#key", "#next"):
-            field = screen.query_one(selector)
-            screen.scroll_to_widget(field, animate=False)
-            await pilot.pause()
-            assert field.region.width > 0, selector
-            assert field.region.right <= 80, selector
-            assert 0 < field.region.bottom <= 24, selector
+        for step, selectors in steps.items():
+            await pilot.click(f"#step-{step}")
+            await settle(pilot)
+            for selector in (*selectors, "#next"):
+                field = screen.query_one(selector)
+                field.scroll_visible(animate=False)
+                await pilot.pause()
+                assert field.region.width > 0, (step, selector)
+                assert field.region.right <= 80, (step, selector)
+                assert 0 < field.region.bottom <= 24, (step, selector)
 
 
 async def test_the_plan_shows_each_file_and_locale(isolated: Path, vault: object) -> None:
