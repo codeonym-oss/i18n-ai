@@ -1,1 +1,5 @@
 - 2026-11-10: tracked as GH-69 (#69).
+- 2026-11-11: ticket pass: decisions 001–005 (three steps, switched in place, capped locale cards, model card over the selects, opens on Targets); draft.md updated to match; impl.md written; planned.
+- 2026-11-11: impl.md: "The design, point by point", from v2/Setup read again; Continue and Plan sit in the header, as the design draws them.
+- 2026-11-11: building on feat/69-aurora-setup-wizard.
+- 2026-11-11: impl.md: corrections while building (test file name, card names, percent in the kit, the 80×24 panel, ⌃R's warnings).
