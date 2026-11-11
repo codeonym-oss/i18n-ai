@@ -1,4 +1,4 @@
-"""The TUI driven with Textual's pilot: the app, waiting on it, and the setup form filled in."""
+"""The TUI driven with Textual's pilot: the app, waiting on it, and the setup filled in."""
 
 import time
 from collections.abc import Awaitable, Callable
@@ -7,11 +7,12 @@ from pathlib import Path
 from mediary import Mediator
 from rich.console import Console
 from textual.pilot import Pilot
-from textual.widgets import Input, Select, SelectionList
+from textual.widgets import Input, Select
 
 from i18n_ai.application.exports.locale import GenerateLocalesCommand, GenerationOptions
 from i18n_ai.application.ports.locale import TreeRequest
 from i18n_ai.cli.tui import I18nAiApp
+from i18n_ai.cli.tui.kit.widgets import LocaleCard
 from i18n_ai.cli.tui.plan import PlanScreen
 from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.di.container import build_container
@@ -68,11 +69,23 @@ async def planning(pilot: Pilot[None], seconds: float = 10) -> PlanScreen:
     raise AssertionError(f"no plan (on {type(pilot.app.screen).__name__})")
 
 
+async def pick_targets(pilot: Pilot[None], *codes: str) -> None:
+    """Each of `codes` toggled on its card, searched for first, as a person would."""
+    search = pilot.app.screen.query_one("#search", Input)
+    for code in codes:
+        search.value = code
+        await settle(pilot)
+        card = next(card for card in pilot.app.screen.query(LocaleCard) if card.code == code)
+        card.action_pick()
+        await settle(pilot)
+    search.value = ""
+    await settle(pilot)
+
+
 async def ready(pilot: Pilot[None], *targets: str) -> None:
-    """The form filled in, with `targets` checked as well."""
+    """The setup filled in, with `targets` picked as well."""
     screen = pilot.app.screen
-    for target in targets:
-        screen.query_one("#targets", SelectionList).select(target)
+    await pick_targets(pilot, *targets)
     await pick(pilot, "#provider", "openai")
     screen.query_one("#key", Input).value = "sk-test"
     await pick(pilot, "#model", "fake-model")

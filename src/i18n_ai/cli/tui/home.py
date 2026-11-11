@@ -17,7 +17,7 @@ from ...application.exports.locale import (
 )
 from ...domain.exports.locale import LocaleCode, SourceLocaleUnknown
 from .aurora import HEAT
-from .kit.heat import HeatCell
+from .kit.heat import HeatCell, percent
 from .kit.shell import ShellScreen
 from .kit.widgets import Card, KpiTile
 from .plan import count
@@ -128,7 +128,7 @@ def _figures(report: ScanReport, entries: tuple[FallbackView, ...]) -> Grid:
     return Grid(
         KpiTile(
             "COVERAGE",
-            f"{_percent(done, total)}%" if total else "—",
+            f"{percent(done, total)}%" if total else "—",
             "translated, all locales",
         ),
         KpiTile(
@@ -162,7 +162,7 @@ def _coverage(report: ScanReport, entries: tuple[FallbackView, ...]) -> Card:
                 cells.append(HeatCell(0))
                 continue
             fallen = sum(_in(view, cell, report.output) for view in entries)
-            share = _percent(cell.reusable, cell.reusable + cell.to_translate)
+            share = percent(cell.reusable, cell.reusable + cell.to_translate)
             cells.append(HeatCell(share, f"◐ {fallen}" if fallen else ""))
         done = sum(cell.reusable for cell in target.files)
         messages = done + target.to_translate
@@ -180,11 +180,6 @@ def _coverage(report: ScanReport, entries: tuple[FallbackView, ...]) -> Card:
 
 def _head(text: str, kind: str = "") -> Static:
     return Static(escape(text), classes=f"heat-head heat-{kind}" if kind else "heat-head")
-
-
-def _percent(part: int, whole: int) -> int:
-    """`part` of `whole`, rounded down: 100 only when nothing is left."""
-    return part * 100 // whole if whole else 0
 
 
 def _in(view: FallbackView, cell: TargetFileView, output: Path) -> bool:

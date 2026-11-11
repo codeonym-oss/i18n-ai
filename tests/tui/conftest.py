@@ -1,3 +1,4 @@
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.extensions.single_file import SingleFileSnapshotExtension, WriteMode
 from textual.pilot import Pilot
+from textual.widgets import Footer
 
 from i18n_ai.cli.tui import I18nAiApp
 from i18n_ai.di import bootstrap
@@ -61,7 +63,18 @@ def snap(snapshot: SnapshotAssertion) -> Snap:
             if setup is not None:
                 await setup(pilot)
                 await settle(pilot)
+            await footed(pilot)
             svg = app.export_screenshot(title="i18n-ai")
         assert svg == snapshot.use_extension(SvgSnapshot)
 
     return check
+
+
+async def footed(pilot: Pilot[None], seconds: float = 5) -> None:
+    """Until the footer shows its keys: it recomposes after a refresh, removing them first, and
+    a slow machine can take the screenshot in between."""
+    footer = pilot.app.screen.query_one(Footer)
+    deadline = time.monotonic() + seconds
+    while not footer.children and time.monotonic() < deadline:
+        await pilot.pause(0.05)
+    await pilot.pause()
