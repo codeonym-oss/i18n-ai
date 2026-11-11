@@ -1,1 +1,5 @@
 - 2026-11-10: tracked as GH-70 (#70).
+- 2026-11-11: ticket pass: decisions 001–004, impl.md, draft.md rewritten with "Not part of it" (history/2026-11-11_1538_draft.md); status planned (history/2026-11-11_1538_meta.md).
+- 2026-11-11: building on feat/70-aurora-plan-screen (history/2026-11-11_1540_meta.md).
+- 2026-11-11: impl.md: corrections while building (decision 005's fixed labels, the arrows on the cell, the snapshot fixture, .card.-fill, the narrow status line) (history/2026-11-11_1606_impl.md).
+- 2026-11-11: impl.md: after the review (panel look in aurora.tcss, one map of state words, RUNS, strip edge cases, headers and status line, the messages' wording; three points kept as built).
