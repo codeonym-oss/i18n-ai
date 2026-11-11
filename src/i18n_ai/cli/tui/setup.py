@@ -726,8 +726,13 @@ class SetupScreen(ShellScreen[None]):
         except REFUSALS as error:
             self.notify(error.message, severity="error")
             return
+        try:
+            fallbacks = (await self._mediator.send(ListFallbacksQuery(request))).entries
+        except REFUSALS:
+            fallbacks = ()  # the record unread: the plan shows none, the run goes on
+        options = generation_options(self._settings)
         await self._in_run()
-        plan = await self.app.push_screen_wait(PlanScreen(report))
+        plan = await self.app.push_screen_wait(PlanScreen(report, fallbacks, options.batch_size))
         if plan is None:
             return
         request = dataclasses.replace(request, exclude=request.exclude + plan.exclude)
@@ -740,7 +745,7 @@ class SetupScreen(ShellScreen[None]):
             request,
             plan.targets,
             ModelSpec(spec),
-            generation_options(self._settings),
+            options,
             skip=plan.skip,
         )
         try:

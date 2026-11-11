@@ -3,10 +3,10 @@ kind: ticket
 title: Show a TUI run's plan as Aurora cells with an inspector
 key: GH-70
 parent: GH-67
-status: tracked
-branch:
+status: building
+branch: feat/70-aurora-plan-screen
 tracker-url: https://github.com/codeonym-oss/i18n-ai/issues/70
 mr:
 created: 2026-11-10
-updated: 2026-11-10
+updated: 2026-11-11
 ---

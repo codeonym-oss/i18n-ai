@@ -61,8 +61,10 @@ def snap(snapshot: SnapshotAssertion) -> Snap:
         async with app.run_test(size=size) as pilot:
             await settle(pilot)
             if setup is not None:
+                # Not `settle`: a screen pushed from a worker (the plan) holds that worker until
+                # it closes, so waiting for every worker would never end; each step settles itself
                 await setup(pilot)
-                await settle(pilot)
+                await pilot.pause()
             await footed(pilot)
             svg = app.export_screenshot(title="i18n-ai")
         assert svg == snapshot.use_extension(SvgSnapshot)
