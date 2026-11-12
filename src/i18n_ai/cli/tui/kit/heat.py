@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from textual.content import Content
 from textual.widgets import Static
 
@@ -25,12 +27,32 @@ def strip(width: int, to_translate: int, fallbacks: int, kept: int, off: bool = 
         return Content("")
     if off:
         return Content.styled(STRIP * width, "$border-blurred")
+    return _runs(width, counts, [style for _, style in RUNS])
+
+
+# A run's progress bar: its messages written, partial, failed, and still to come
+PROGRESS = ("$success", "$warning", "$error", "$border-strong")
+
+
+def progress(width: int, written: int, partial: int, failed: int, total: int) -> Content:
+    """A run's messages across `width`, in proportion: those of its jobs written in mint, partial
+    in amber, failed in coral, the rest of `total` dark."""
+    counts = (written, partial, failed, max(0, total - written - partial - failed))
+    if not sum(counts) or width <= 0:
+        return Content.styled(STRIP * max(0, width), "$border-strong")
+    return _runs(width, counts, PROGRESS)
+
+
+def _runs(width: int, counts: Sequence[int], styles: Sequence[str]) -> Content:
+    """`counts` across `width` in proportion, each in its style; each part there takes one cell
+    at least, while there is room."""
+    total = sum(counts)
     sizes = [max(1, number * width // total) if number else 0 for number in counts]
     while sum(sizes) > width:  # narrower than its parts
         sizes[sizes.index(max(sizes))] -= 1
-    sizes[counts.index(max(counts))] += width - sum(sizes)
+    sizes[list(counts).index(max(counts))] += width - sum(sizes)
     return Content.assemble(
-        *((STRIP * size, style) for size, (_, style) in zip(sizes, RUNS, strict=True) if size)
+        *((STRIP * size, style) for size, style in zip(sizes, styles, strict=True) if size)
     )
 
 

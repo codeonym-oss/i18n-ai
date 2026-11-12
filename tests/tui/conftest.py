@@ -51,14 +51,16 @@ class SvgSnapshot(SingleFileSnapshotExtension):
 @pytest.fixture
 def snap(snapshot: SnapshotAssertion) -> Snap:
     """`app` at `size`, after `setup(pilot)` when given, matches its SVG under `__snapshots__/`;
-    `--snapshot-update` writes it."""
+    `--snapshot-update` writes it. Its pop-ups show only with `notifications`, which Textual's
+    tests leave out."""
 
     async def check(
         app: I18nAiApp,
         size: tuple[int, int],
         setup: Callable[[Pilot[None]], Awaitable[None]] | None = None,
+        notifications: bool = False,
     ) -> None:
-        async with app.run_test(size=size) as pilot:
+        async with app.run_test(size=size, notifications=notifications) as pilot:
             await settle(pilot)
             if setup is not None:
                 # Not `settle`: a screen pushed from a worker (the plan) holds that worker until

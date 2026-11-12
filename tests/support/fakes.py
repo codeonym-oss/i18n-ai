@@ -43,6 +43,7 @@ class FakeGateway:
             broken_first or set()
         )  # keys whose first translation loses its placeholders
         self.refuse = refuse or set()  # file names the classifier refuses
+        self.unchanged: set[str] = set()  # keys given back as their source: a warning
         self.hold: asyncio.Event | None = None  # when set here, translations wait for it
         self.batches: list[BatchRequest] = []
         self.classified: list[str] = []
@@ -59,6 +60,8 @@ class FakeGateway:
         out: dict[str, str] = {}
         for unit in batch.units:
             text = _tagged(unit, batch.schema.target)
+            if str(unit.path) in self.unchanged:
+                text = unit.source
             if str(unit.path) in self.broken_first and unit.id not in batch.problems:
                 text = re.sub(r"\{\{[^}]*\}\}|(?<![A-Za-z0-9_]):[A-Za-z_][A-Za-z0-9_]*", "", text)
             out[unit.id] = text

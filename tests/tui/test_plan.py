@@ -3,11 +3,11 @@ turned off before a run."""
 
 from pathlib import Path
 
-from textual.widgets import DataTable, Static
+from textual.widgets import Static
 
 from i18n_ai.application.exports.locale import ScanReport, SourceFileView, TargetView
 from i18n_ai.cli.tui.kit.shell import ShellScreen
-from i18n_ai.cli.tui.kit.widgets import PlanCell
+from i18n_ai.cli.tui.kit.widgets import PlanCell, RunCell
 from i18n_ai.cli.tui.plan import PlanScreen
 from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.cli.tui.setup import SetupScreen
@@ -32,7 +32,7 @@ def inspector(plan: PlanScreen) -> str:
 
 
 def receipt(run: RunScreen) -> str:
-    return shown(run, "#receipt")
+    return shown(run, "#again-text")
 
 
 async def test_the_plan_shows_each_file_and_locale(isolated: Path, vault: object) -> None:
@@ -149,9 +149,7 @@ async def test_a_cell_turned_off_is_not_written(isolated: Path, vault: object) -
 
         assert (isolated / "locales/de/auth/login.json").is_file()
         assert not (isolated / "locales/de/common.json").exists()
-        assert "To run it again: i18n-ai generate locales -t fr,de -m openai:fake-model" in (
-            receipt(run)
-        )
+        assert "$ i18n-ai generate locales -t fr,de -m openai:fake-model" in (receipt(run))
         assert "1 single cell was off; this command runs it too." in receipt(run)
 
 
@@ -168,8 +166,8 @@ async def test_a_row_off_is_excluded_in_the_command(isolated: Path, vault: objec
 
         assert "-m openai:fake-model --exclude common.json" in receipt(run)
         assert "single cell" not in receipt(run)
-        grid = run.query_one(DataTable)
-        assert [str(cell) for cell in grid.get_row_at(1)] == ["common.json", "off"]
+        common = [cell.text for cell in run.query(RunCell) if cell.file == "common.json"]
+        assert common == ["off"]
 
 
 async def test_the_plan_fits_80_columns(isolated: Path, vault: object) -> None:

@@ -83,9 +83,8 @@ class LocaleCard(Vertical, can_focus=True):
         self.action_pick()
 
 
-class PlanCell(Vertical, can_focus=True):
-    """A file in a locale, in the plan: its state's tag, whether it is on, the messages it will
-    translate, and the strip of its file's messages. The arrows post `Moved`."""
+class GridCell(Vertical, can_focus=True):
+    """A file in a locale, in a `CellGrid`: the arrows post `Moved`, the grid moves the focus."""
 
     BINDINGS = [
         Binding("up", "move(0, -1)", show=False),
@@ -93,19 +92,31 @@ class PlanCell(Vertical, can_focus=True):
         Binding("left", "move(-1, 0)", show=False),
         Binding("right", "move(1, 0)", show=False),
     ]
+
+    class Moved(Message):
+        def __init__(self, cell: "GridCell", columns: int, rows: int) -> None:
+            super().__init__()
+            self.cell, self.columns, self.rows = cell, columns, rows
+
+    def __init__(self, file: str, locale: str, classes: str) -> None:
+        super().__init__(classes=classes)
+        self.file, self.locale = file, locale
+        self.text = ""
+
+    def action_move(self, columns: int, rows: int) -> None:
+        self.post_message(self.Moved(self, columns, rows))
+
+
+class PlanCell(GridCell):
+    """A file in a locale, in the plan: its state's tag, whether it is on, the messages it will
+    translate, and the strip of its file's messages."""
+
     # A state: its words, and what the cell shows for its number
     WORDS = {"new": "new", "fill": "fill", "done": "up to date", "off": "off"}
     NUMBERS = {"done": "✓", "off": "—"}
 
-    class Moved(Message):
-        def __init__(self, cell: "PlanCell", columns: int, rows: int) -> None:
-            super().__init__()
-            self.cell, self.columns, self.rows = cell, columns, rows
-
     def __init__(self, file: str, locale: str) -> None:
-        super().__init__(classes="plan-cell")
-        self.file, self.locale = file, locale
-        self.text = ""
+        super().__init__(file, locale, "plan-cell")
 
     def compose(self) -> ComposeResult:
         with Horizontal(classes="cell-head"):
@@ -128,8 +139,43 @@ class PlanCell(Vertical, can_focus=True):
         self.query_one(_Strip).counts = (to_translate, fallbacks, kept, state == "off")
         self.query_one(_Strip).refresh()
 
-    def action_move(self, columns: int, rows: int) -> None:
-        self.post_message(self.Moved(self, columns, rows))
+
+class RunCell(GridCell):
+    """A file in a locale, in a run: its job's state, as a glyph and a word, then what came of it
+    and, under, how many attempts it took."""
+
+    # A state: its glyph and its word
+    STATES = {
+        "waiting": ("◌", "waiting"),
+        "translating": ("▸", "translating"),
+        "retry": ("⟳", "retry"),
+        "written": ("●", "written"),
+        "partial": ("◐", "partial"),
+        "refused": ("◐", "refused"),
+        "failed": ("✕", "failed"),
+        "ignored": ("∅", "ignored"),
+        "stopped": ("■", "stopped"),
+        "off": ("—", "off"),
+    }
+
+    def __init__(self, file: str, locale: str) -> None:
+        super().__init__(file, locale, "run-cell")
+
+    def compose(self) -> ComposeResult:
+        yield Static(classes="cell-tag")
+        yield Static(classes="cell-detail", markup=False)
+        yield Static(classes="cell-note", markup=False)
+
+    def show(self, state: str, attempt: str = "", detail: str = "", note: str = "") -> None:
+        """`state` is one of `STATES`; `attempt` is shown while it retries (`2/3`), `detail` says
+        what the job did and `note` goes under it. `text` holds the word and the attempt."""
+        for name in self.STATES:
+            self.set_class(name == state, f"-{name}")
+        glyph, word = self.STATES[state]
+        self.text = f"{word} {attempt}" if attempt else word
+        self.query_one(".cell-tag", Static).update(f"{glyph} {self.text.upper()}")
+        self.query_one(".cell-detail", Static).update(detail)
+        self.query_one(".cell-note", Static).update(note)
 
 
 class _Strip(Widget):

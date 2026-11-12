@@ -1,7 +1,7 @@
 import pytest
 from textual.content import Content
 
-from i18n_ai.cli.tui.kit.heat import shade, strip
+from i18n_ai.cli.tui.kit.heat import progress, shade, strip
 
 
 @pytest.mark.parametrize(
@@ -51,3 +51,23 @@ def test_a_strip_narrower_than_its_runs_keeps_its_width() -> None:
 
 def test_a_strip_takes_no_more_fallbacks_than_messages_to_translate() -> None:
     assert runs(strip(10, 2, 5, 0)) == [("$warning", 10)]
+
+
+@pytest.mark.parametrize(
+    ("counts", "expected"),
+    [
+        ((0, 0, 0, 10), [("$border-strong", 10)]),
+        ((5, 0, 0, 10), [("$success", 5), ("$border-strong", 5)]),
+        ((4, 3, 1, 10), [("$success", 4), ("$warning", 3), ("$error", 1), ("$border-strong", 2)]),
+        ((10, 0, 0, 10), [("$success", 10)]),
+        ((0, 0, 0, 0), [("$border-strong", 10)]),
+    ],
+    ids=["nothing-yet", "half-written", "every-outcome", "all-written", "no-message"],
+)
+def test_a_runs_bar_is_its_messages_by_outcome(
+    counts: tuple[int, int, int, int], expected: list[tuple[str, int]]
+) -> None:
+    content = progress(10, *counts)
+
+    assert len(content) == 10
+    assert runs(content) == expected

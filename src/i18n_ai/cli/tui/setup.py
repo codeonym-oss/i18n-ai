@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual.content import Content
 from textual.reactive import reactive
 from textual.widgets import Button, Checkbox, ContentSwitcher, Input, Label, Select, Static
+from textual.worker import get_current_worker
 
 from ...application.exports.locale import (
     GenerateLocalesCommand,
@@ -741,6 +743,7 @@ class SetupScreen(ShellScreen[None]):
         await self._in_run()
         await self.app.push_screen(screen)
         self._progress.target = screen
+        screen.stop = get_current_worker().cancel
         command = GenerateLocalesCommand(
             request,
             plan.targets,
@@ -748,13 +751,6 @@ class SetupScreen(ShellScreen[None]):
             options,
             skip=plan.skip,
         )
-        try:
-            receipt = await self._mediator.send(command)
-        except REFUSALS as error:
-            screen.stopped(error.message)
-            return
-        finally:
-            self._progress.target = None
         output = self._shown(request.output) if request.output else None
         flags = [word for pattern in plan.exclude for word in ("--exclude", pattern)]
         again = command_line(
@@ -766,11 +762,23 @@ class SetupScreen(ShellScreen[None]):
             f"this command runs {'it' if one else 'them'} too."
         )
         try:
+            receipt = await self._mediator.send(command)
+        except REFUSALS as error:
+            screen.stopped(error.message)
+            return
+        except asyncio.CancelledError:
+            # Stopped by hand: what is written stays, and the record of its fallbacks
+            screen.halted(again, note if plan.skip else None)
+            raise
+        finally:
+            self._progress.target = None
+            screen.stop = None
+        try:
             left = (await self._mediator.send(ListFallbacksQuery(request))).entries
         except REFUSALS:
             left = ()
         review = (lambda: self.shell.open_review(request, ModelSpec(spec))) if left else None
-        screen.show_receipt(receipt, again, note if plan.skip else None, review)
+        screen.show_receipt(receipt, again, note if plan.skip else None, review, len(left))
 
     async def _in_run(self) -> None:
         """The Run section shown, for a screen pushed on it: another section may have been

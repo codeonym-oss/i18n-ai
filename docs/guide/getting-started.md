@@ -62,9 +62,17 @@ messages, the agents and the calls to the model of the cells on.
 `Ctrl+R` again runs it: no other question. The run screen keeps the plan's grid, and each cell
 follows its file and locale live: waiting, translating, **retry 2/3** when the model's answer
 broke a rule and goes back to it, then written, partial (with fallbacks: messages left in their
-source text), failed or ignored. Under it, a bar, and **Problems**: each failed or partial file
-as it comes. Then the receipt, and the one-line command that repeats the run without the setup.
-A file turned off is an `--exclude` in that command, a locale turned off is not among its
+source text), failed or ignored. Above it, the progress in messages, with the jobs, the retries,
+the partial and failed jobs and the time so far; beside it, every event as it comes, each
+fallback with its reason and each warning under its file, and `p` keeps only the problems. A
+partial or failed file, a file the model left out, and the end pop up. `Ctrl+C` stops the run:
+what is written stays.
+
+![A run under way: one file retrying, one partial](tui-run.svg)
+
+At the end the screen is the receipt: the files written, the messages translated, the fallbacks
+and the failures, and the one-line command that repeats the run without the setup (`y` asks your terminal to copy
+it). A file turned off is an `--exclude` in that command, a locale turned off is not among its
 targets; single cells have no option of their own, so the receipt says when the command runs them too.
 `b` goes back, `q` quits, `Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.
 

@@ -125,7 +125,8 @@ async def test_a_run_goes_on_while_home_shows_and_is_there_on_return(
         await pilot.press("ctrl+n")
         await pilot.pause()
         assert app.screen is run
-        assert "Generated with openai:fake-model" in str(run.query_one("#receipt", Static).content)
+        lines = run.query_one("#feed").query(".event").results(Static)
+        assert any("Generated with openai:fake-model" in str(line.content) for line in lines)
 
 
 async def test_a_plan_shows_in_run_when_another_section_was_picked_meanwhile(
@@ -250,7 +251,7 @@ async def test_the_switcher_moves_home_and_the_setup_but_not_a_run_going(
         await pilot.pause()
 
         assert app.screen is run
-        assert str(run.query_one("#status-tree", Static).content) == "i18next/locales"
+        assert str(run.query_one("#status-tree", Static).content).endswith("  ·  i18next/locales")
         gateway.hold.set()
         await ended(pilot)
 

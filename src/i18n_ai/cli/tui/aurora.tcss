@@ -91,10 +91,51 @@ ShellScreen.-small #notice { display: block; }
 .cell-strip { height: 1; }
 ShellScreen.-narrow .plan-cell { height: 4; }
 
-/* The plan's headers and run bar */
-.column-head { background: $panel; border: round $border-blurred; }
-ShellScreen.-narrow .column-head { border: none; }
+/* Run cells: a job's state, its tint the state's colour */
+.run-cell { height: 5; padding: 0 1; background: $surface; border: round $border; }
+.run-cell .cell-tag { width: auto; text-style: bold; color: $text-muted; }
+.run-cell .cell-detail { text-wrap: nowrap; text-overflow: ellipsis; }
+.run-cell .cell-note { color: $text-muted; text-wrap: nowrap; text-overflow: ellipsis; }
+.run-cell.-translating { border: round $secondary 50%; }
+.run-cell.-translating .cell-tag { color: $secondary; }
+.run-cell.-retry { background: $warning 6%; border: round $warning 50%; }
+.run-cell.-retry .cell-tag { color: $warning; }
+.run-cell.-written { background: $success 6%; border: round $success 30%; }
+.run-cell.-written .cell-tag { color: $success; }
+.run-cell.-partial, .run-cell.-refused { background: $warning 6%; border: round $warning 30%; }
+.run-cell.-partial .cell-tag, .run-cell.-refused .cell-tag { color: $warning; }
+.run-cell.-failed, .run-cell.-stopped { background: $error 6%; border: round $error 30%; }
+.run-cell.-failed .cell-tag, .run-cell.-stopped .cell-tag { color: $error; }
+.run-cell.-off, .run-cell.-ignored { background: $panel; border: dashed $border-strong; }
+.run-cell:focus { border: heavy $primary; }
+ShellScreen.-narrow .run-cell { height: 4; }
+ShellScreen.-narrow .run-cell .cell-note { display: none; }
+
+/* The cell grid: the locales' headers and the files' names held while the cells scroll */
+CellGrid { height: 1fr; }
+#grid-top { height: auto; }
+.grid-corner { width: 24; color: $text-muted; text-style: bold; padding: 1 0 0 0; }
+#locale-strip { height: auto; overflow: hidden hidden; padding-right: 1; }
+#grid-body { height: 1fr; }
+#file-column { width: 24; overflow: hidden hidden; }
+#cells { scrollbar-gutter: stable; scrollbar-size-vertical: 1; }
+.columns { height: auto; grid-gutter: 0 1; }
+.column-head { height: 3; padding: 0 1; background: $panel; border: round $border-blurred; }
+.column-head-name { width: 1fr; text-wrap: nowrap; text-overflow: ellipsis; }
+.column-head-count { width: auto; color: $text-muted; }
+.file-head { height: 5; padding: 1 0 0 1; }
+.file-head-note { color: $text-muted; }
+ShellScreen.-narrow .column-head { height: 1; border: none; }
+ShellScreen.-narrow .file-head { height: 4; }
+ShellScreen.-narrow .grid-corner { padding: 0; }
+
+/* The plan's run bar */
 #run-bar { background: $panel; border: round $border; }
 ShellScreen.-narrow #run-bar { border: none; }
 ShellScreen.-narrow .cell-number { display: none; }
 ShellScreen.-narrow .cell-short { display: block; }
+
+/* The run screen */
+#done-label { color: $text-muted; text-style: bold; }
+#done-percent { text-style: bold; color: $primary; }
+.event { margin-bottom: 1; }

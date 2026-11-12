@@ -3,3 +3,5 @@
 - 2026-11-11: building on feat/70-aurora-plan-screen (history/2026-11-11_1540_meta.md).
 - 2026-11-11: impl.md: corrections while building (decision 005's fixed labels, the arrows on the cell, the snapshot fixture, .card.-fill, the narrow status line) (history/2026-11-11_1606_impl.md).
 - 2026-11-11: impl.md: after the review (panel look in aurora.tcss, one map of state words, RUNS, strip edge cases, headers and status line, the messages' wording; three points kept as built).
+- 2026-11-11: meta.md: in-review, mr #76 (history/2026-11-11_1640_meta.md).
+- 2026-11-11: meta.md: done, #76 merged (9e3e354).

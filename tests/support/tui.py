@@ -9,11 +9,18 @@ from rich.console import Console
 from textual.pilot import Pilot
 from textual.widgets import Input, Select
 
-from i18n_ai.application.exports.locale import GenerateLocalesCommand, GenerationOptions
+from i18n_ai.application.exports.locale import (
+    GenerateLocalesCommand,
+    GenerationOptions,
+    ProgressEvent,
+    ScanLocaleTreeQuery,
+)
 from i18n_ai.application.ports.locale import TreeRequest
+from i18n_ai.cli.common.setup import planned
 from i18n_ai.cli.tui import I18nAiApp
 from i18n_ai.cli.tui.kit.widgets import LocaleCard, PlanCell
 from i18n_ai.cli.tui.plan import PlanScreen
+from i18n_ai.cli.tui.progress import TuiProgress
 from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.di.container import build_container
 from i18n_ai.di.messaging import build_mediator
@@ -49,6 +56,33 @@ async def on_cell(pilot: Pilot[None], plan: PlanScreen, row: int, column: int, k
     cell = list(plan.query(PlanCell))[row * len(plan.query(".column-head")) + column]
     cell.focus()
     await pilot.press(key)
+    await pilot.pause()
+
+
+async def scripted(
+    pilot: Pilot[None], *targets: str, off: set[tuple[str, str]] | None = None
+) -> tuple[RunScreen, list[float]]:
+    """A run screen pushed on its own, on the example's scan into `targets`, with no run behind
+    it: the test posts its events with `post`. Its clock reads the list's last time."""
+    app = pilot.app
+    assert isinstance(app, I18nAiApp)
+    codes = tuple(LocaleCode(code) for code in targets)
+    report = await app.mediator.send(
+        ScanLocaleTreeQuery(TreeRequest(app.project / "locales" / "en"), codes)
+    )
+    files = [file.name for file in report.qualified]
+    times = [0.0]
+    run = RunScreen(
+        report, planned(files, codes, off or set()), "i18next/locales", lambda: times[-1]
+    )
+    await app.push_screen(run)
+    await pilot.pause()
+    return run, times
+
+
+async def post(pilot: Pilot[None], run: RunScreen, *events: ProgressEvent) -> None:
+    for event in events:
+        run.post_message(TuiProgress.Event(event))
     await pilot.pause()
 
 
