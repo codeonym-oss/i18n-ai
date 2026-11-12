@@ -12,7 +12,7 @@ _STYLES = {
     ResultStatus.FAILED: "red",
 }
 # The failures and warnings listed, per file; the rest are counted.
-_LISTED = 8
+LISTED = 8
 
 
 def render_receipt(console: Console, receipt: GenerationReceipt) -> None:
@@ -51,18 +51,18 @@ def render_receipt(console: Console, receipt: GenerationReceipt) -> None:
                 f"[red]✗[/] {result.file} → {result.target}: {len(result.failures)} message(s) "
                 "kept their source text"
             )
-            for violation in result.failures[:_LISTED]:
+            for violation in result.failures[:LISTED]:
                 console.print(f"    [dim]{violation.path}[/] {violation.message}")
-            if len(result.failures) > _LISTED:
-                console.print(f"    [dim]… and {len(result.failures) - _LISTED} more[/]")
+            if len(result.failures) > LISTED:
+                console.print(f"    [dim]… and {len(result.failures) - LISTED} more[/]")
         if result.warnings:
             console.print(
                 f"[yellow]![/] {result.file} → {result.target}: {len(result.warnings)} warning(s)"
             )
-            for violation in result.warnings[:_LISTED]:
+            for violation in result.warnings[:LISTED]:
                 console.print(f"    [dim]{violation.path}[/] {violation.message}")
-            if len(result.warnings) > _LISTED:
-                console.print(f"    [dim]… and {len(result.warnings) - _LISTED} more[/]")
+            if len(result.warnings) > LISTED:
+                console.print(f"    [dim]… and {len(result.warnings) - LISTED} more[/]")
 
     # 3. The totals
     counts = receipt.count()

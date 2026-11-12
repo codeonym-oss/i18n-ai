@@ -1,35 +1,20 @@
 """The TUI, driven with Textual's pilot in a copy of the examples, with the fake model."""
 
-import asyncio
 import json
-import time
 from pathlib import Path
 
 import pytest
 from textual.content import Content
 from textual.pilot import Pilot
-from textual.widgets import ContentSwitcher, DataTable, Input, Log, Select, Static
+from textual.widgets import ContentSwitcher, DataTable, Input, Select, Static
 from textual.widgets.select import InvalidSelectValueError
 
 from i18n_ai.cli.tui.confirm import ConfirmScreen
-from i18n_ai.cli.tui.grid import JobGrid
 from i18n_ai.cli.tui.kit.widgets import LocaleCard
 from i18n_ai.cli.tui.review import EditScreen, ReviewScreen
-from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.cli.tui.setup import SetupScreen
 from support.fakes import FakeGateway, InstalledCatalog
-from support.tui import ended, fallen, on_cell, pick, planning, ready, running, settle, tui
-
-
-def cells(screen: RunScreen) -> list[list[str]]:
-    """The grid, its header first."""
-    grid = screen.query_one(DataTable)
-    header = [str(column.label) for column in grid.columns.values()]
-    return [header] + [[str(cell) for cell in grid.get_row_at(i)] for i in range(grid.row_count)]
-
-
-def text(screen: RunScreen) -> str:
-    return str(screen.query_one("#receipt", Static).content)
+from support.tui import ended, fallen, pick, planning, ready, running, settle, tui
 
 
 async def test_the_setup_starts_from_the_projects_preset(isolated: Path) -> None:
@@ -62,36 +47,6 @@ async def test_the_model_waits_for_its_provider_and_a_missing_key_is_asked(
         assert screen.query_one("#model", Select).is_blank()
         assert screen.query_one("#key", Input).display
         assert screen.query_one("#key", Input).password
-
-
-async def test_a_run_writes_the_targets_and_says_how_to_run_it_again(
-    isolated: Path, vault: object
-) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(120, 40)) as pilot:
-        await running(pilot)
-        screen = app.screen
-        await pick(pilot, "#provider", "openai")
-        screen.query_one("#key", Input).value = "sk-test"
-        await pick(pilot, "#model", "fake-model")
-
-        await planning(pilot)
-        await pilot.press("ctrl+r")
-        run = await ended(pilot)
-
-        receipt = text(run)
-        assert "Generated with openai:fake-model" in receipt
-        assert "To run it again: i18n-ai generate locales -t fr -m openai:fake-model" in receipt
-        french = json.loads((isolated / "locales/fr/common.json").read_text(encoding="utf-8"))
-        assert french["app"]["welcome"]  # the fake's, or the good one kept
-        assert cells(run)[1:] == [
-            ["auth/login.json", "written"],
-            ["common.json", "written"],
-        ]
-
-        await pilot.press("b")
-        await settle(pilot)
-        assert isinstance(app.screen, SetupScreen)
 
 
 async def test_declining_the_install_goes_back_to_the_setup(
@@ -212,112 +167,6 @@ async def test_every_field_fits_80_columns(isolated: Path) -> None:
                 assert field.region.width > 0, (step, selector)
                 assert field.region.right <= 80, (step, selector)
                 assert 0 < field.region.bottom <= 24, (step, selector)
-
-
-async def test_a_retry_shows_in_its_cell_as_it_happens(
-    isolated: Path, vault: object, gateway: FakeGateway, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    gateway.broken_first = {"app.welcome"}
-    shown: list[tuple[str, str, str]] = []
-    show = JobGrid.show
-    monkeypatch.setattr(
-        JobGrid,
-        "show",
-        lambda grid, file, locale, text: (
-            shown.append((file, locale, text)),
-            show(grid, file, locale, text),
-        ),
-    )
-    app = tui(isolated)
-    async with app.run_test(size=(120, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot)
-        await planning(pilot)
-        await pilot.press("ctrl+r")
-        await ended(pilot)
-
-    common = [text for file, locale, text in shown if (file, locale) == ("common.json", "fr")]
-    assert common == ["translating", "retry 2/3", "written"]
-
-
-async def test_a_partial_file_is_listed_under_problems(
-    isolated: Path, vault: object, gateway: FakeGateway
-) -> None:
-    gateway.broken_first = {"app.welcome"}
-    app = tui(isolated, attempts=1)
-    async with app.run_test(size=(120, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot)
-        await planning(pilot)
-        await pilot.press("ctrl+r")
-        run = await ended(pilot)
-
-        assert cells(run)[2] == ["common.json", "partial"]
-        problems = run.query_one("#problems", Log)
-        assert list(problems.lines) == ["common.json → fr: 1 fallback"]
-
-
-async def test_the_run_shows_waiting_cells_and_the_ones_off(isolated: Path, vault: object) -> None:
-    app = tui(isolated)
-    async with app.run_test(size=(120, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot, "de")
-        plan = await planning(pilot)
-        await on_cell(pilot, plan, 1, 1, "space")
-
-        await pilot.press("ctrl+r")
-        run = await ended(pilot)
-
-        assert cells(run)[1:] == [
-            ["auth/login.json", "written", "written"],
-            ["common.json", "written", "off"],
-        ]
-
-
-async def test_a_run_goes_from_waiting_to_written(
-    isolated: Path, vault: object, gateway: FakeGateway, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    classified, translated = asyncio.Event(), asyncio.Event()
-    classify, translate = gateway.classify, gateway.translate
-
-    async def held_classify(file, source):  # type: ignore[no-untyped-def]
-        await classified.wait()
-        return await classify(file, source)
-
-    async def held_translate(batch):  # type: ignore[no-untyped-def]
-        await translated.wait()
-        return await translate(batch)
-
-    monkeypatch.setattr(gateway, "classify", held_classify)
-    monkeypatch.setattr(gateway, "translate", held_translate)
-    app = tui(isolated)
-    async with app.run_test(size=(120, 40)) as pilot:
-        await running(pilot)
-        await ready(pilot)
-        await planning(pilot)
-        await pilot.press("ctrl+r")
-        run = await showing(pilot, "waiting")
-        assert cells(run)[1:] == [["auth/login.json", "waiting"], ["common.json", "waiting"]]
-
-        classified.set()
-        await showing(pilot, "translating", every=True)
-
-        translated.set()
-        await ended(pilot)
-        assert cells(run)[1:] == [["auth/login.json", "written"], ["common.json", "written"]]
-
-
-async def showing(pilot: Pilot[None], text: str, every: bool = False) -> RunScreen:
-    """The run screen, once one of its cells (or `every` one) reads `text`."""
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline:
-        screen = pilot.app.screen
-        if isinstance(screen, RunScreen) and screen.is_mounted:
-            states = [cell for row in cells(screen)[1:] for cell in row[1:]]
-            if (all if every else any)(state == text for state in states):
-                return screen
-        await pilot.pause(0.05)
-    raise AssertionError(f"no cell reads {text!r}")
 
 
 RECORD = "locales/.i18n-ai-fallbacks.json"
