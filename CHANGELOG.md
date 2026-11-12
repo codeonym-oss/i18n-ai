@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.4.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.3.0...v0.4.0) (2026-11-12)
+
+
+### Features
+
+* fallback intents to list, set, retry and accept ([#33](https://github.com/codeonym-oss/i18n-ai/issues/33)) ([#47](https://github.com/codeonym-oss/i18n-ai/issues/47)) ([e020671](https://github.com/codeonym-oss/i18n-ai/commit/e020671cabf17023628326fc213ab5d67f1955fb))
+* open a full-screen TUI by default, starting with its setup screen ([#30](https://github.com/codeonym-oss/i18n-ai/issues/30)) ([#37](https://github.com/codeonym-oss/i18n-ai/issues/37)) ([3d271ba](https://github.com/codeonym-oss/i18n-ai/commit/3d271ba6067ad4922021133cbeb84665eea51756))
+* open the TUI on the Aurora shell and its Home ([#68](https://github.com/codeonym-oss/i18n-ai/issues/68)) ([#74](https://github.com/codeonym-oss/i18n-ai/issues/74)) ([e9e437d](https://github.com/codeonym-oss/i18n-ai/commit/e9e437d98a0358c3e139fa75c07f65de7f3e20fa))
+* plan a TUI run as a files × locales grid, with single cells turned off ([#31](https://github.com/codeonym-oss/i18n-ai/issues/31)) ([#38](https://github.com/codeonym-oss/i18n-ai/issues/38)) ([a1ec720](https://github.com/codeonym-oss/i18n-ai/commit/a1ec720318b276096882b3452d916c4aaf04d8ea))
+* record the fallbacks, and translate them again ([#29](https://github.com/codeonym-oss/i18n-ai/issues/29)) ([#35](https://github.com/codeonym-oss/i18n-ai/issues/35)) ([8287930](https://github.com/codeonym-oss/i18n-ai/commit/82879300abfa327445ab8bfd7e317678ec39c2b5))
+* review the fallbacks in the TUI ([#33](https://github.com/codeonym-oss/i18n-ai/issues/33)) ([#48](https://github.com/codeonym-oss/i18n-ai/issues/48)) ([adadda6](https://github.com/codeonym-oss/i18n-ai/commit/adadda6544eb0b4592a8d915680ce7fcb36fd1fa))
+* set up a TUI run as the Aurora wizard ([#69](https://github.com/codeonym-oss/i18n-ai/issues/69)) ([#75](https://github.com/codeonym-oss/i18n-ai/issues/75)) ([6975810](https://github.com/codeonym-oss/i18n-ai/commit/6975810eb7a470067648fdf24ea74428756cc1cf))
+* show a TUI run live on the Aurora run screen ([#71](https://github.com/codeonym-oss/i18n-ai/issues/71)) ([#77](https://github.com/codeonym-oss/i18n-ai/issues/77)) ([c5f2a15](https://github.com/codeonym-oss/i18n-ai/commit/c5f2a1578729eb72dfe0b56d1686bd1f65f06b26))
+* show a TUI run's plan as Aurora cells with an inspector ([#70](https://github.com/codeonym-oss/i18n-ai/issues/70)) ([#76](https://github.com/codeonym-oss/i18n-ai/issues/76)) ([9e3e354](https://github.com/codeonym-oss/i18n-ai/commit/9e3e3541a3ba561c461ca82a0c1c310d61fd35b7))
+* watch a TUI run live, retries and failures included ([#32](https://github.com/codeonym-oss/i18n-ai/issues/32)) ([#39](https://github.com/codeonym-oss/i18n-ai/issues/39)) ([a9fc741](https://github.com/codeonym-oss/i18n-ai/commit/a9fc7418eec2f5d78d664041538401801fba29c6))
+
+
+### Bug Fixes
+
+* drop the fallback record's entries whose target is gone ([#62](https://github.com/codeonym-oss/i18n-ai/issues/62)) ([#63](https://github.com/codeonym-oss/i18n-ai/issues/63)) ([732f8a6](https://github.com/codeonym-oss/i18n-ai/commit/732f8a6b14c5372ccdd4ad1030aa57584e38eaef))
+
+
+### Documentation
+
+* close the full-screen TUI story ([#15](https://github.com/codeonym-oss/i18n-ai/issues/15)) ([#49](https://github.com/codeonym-oss/i18n-ai/issues/49)) ([597cfad](https://github.com/codeonym-oss/i18n-ai/commit/597cfadd7540b47a635ae5857aec3335dcb806b8))
+* close the stale-record follow-up, note the review's scan ([#62](https://github.com/codeonym-oss/i18n-ai/issues/62)) ([#64](https://github.com/codeonym-oss/i18n-ai/issues/64)) ([15b3adc](https://github.com/codeonym-oss/i18n-ai/commit/15b3adc202541246e2b52853f2da38daaeb20b1c))
+
+
+### Build
+
+* clear the remaining Dependabot alerts, the Laravel example and virtualenv ([#58](https://github.com/codeonym-oss/i18n-ai/issues/58)) ([#59](https://github.com/codeonym-oss/i18n-ai/issues/59)) ([27a95d1](https://github.com/codeonym-oss/i18n-ai/commit/27a95d110cf3a0168429bb965e7a3ef81442f0c8))
+* **deps-dev:** bump the dev-tools group with 3 updates ([#41](https://github.com/codeonym-oss/i18n-ai/issues/41)) ([3d24276](https://github.com/codeonym-oss/i18n-ai/commit/3d24276820c979ec0ca80ebea55b815f242ed19d))
+* **deps-dev:** bump the dev-tools group with 4 updates ([#53](https://github.com/codeonym-oss/i18n-ai/issues/53)) ([ca5ff6c](https://github.com/codeonym-oss/i18n-ai/commit/ca5ff6cb88b89ef39922efa54a0129eb11f5a0da))
+* **deps:** bump langchain from 1.4.6 to 1.4.7 ([#42](https://github.com/codeonym-oss/i18n-ai/issues/42)) ([5ae274b](https://github.com/codeonym-oss/i18n-ai/commit/5ae274bfefc03858363199d03bd6d7d4e84438ad))
+* **deps:** bump langchain from 1.4.7 to 1.4.8 ([#57](https://github.com/codeonym-oss/i18n-ai/issues/57)) ([e394e82](https://github.com/codeonym-oss/i18n-ai/commit/e394e8260a23705210a2e440052488fb37b1b304))
+* **deps:** bump langchain-core from 1.6.12 to 1.7.0 ([#43](https://github.com/codeonym-oss/i18n-ai/issues/43)) ([3615012](https://github.com/codeonym-oss/i18n-ai/commit/3615012335be13688e4550af30aa79ea63158c60))
+* **deps:** bump langchain-core from 1.7.0 to 1.7.4 ([#55](https://github.com/codeonym-oss/i18n-ai/issues/55)) ([533aff1](https://github.com/codeonym-oss/i18n-ai/commit/533aff1ad08bb4e982247715058f45ed31977762))
+* **deps:** bump langgraph from 1.2.16 to 1.2.18 ([#44](https://github.com/codeonym-oss/i18n-ai/issues/44)) ([44202cb](https://github.com/codeonym-oss/i18n-ai/commit/44202cbe05ecd2b45203467205b0561169b04cf5))
+* **deps:** bump langgraph from 1.2.18 to 1.2.19 ([#56](https://github.com/codeonym-oss/i18n-ai/issues/56)) ([bae9701](https://github.com/codeonym-oss/i18n-ai/commit/bae970188364012a32c2b53b4ffe5e1ab5fd8c5f))
+* **deps:** bump pydantic from 2.14.1 to 2.14.2 ([#54](https://github.com/codeonym-oss/i18n-ai/issues/54)) ([f5887d8](https://github.com/codeonym-oss/i18n-ai/commit/f5887d8ee267902a1634edacb08608fd34571de3))
+* raise the example manifests' dependency floors past known vulnerabilities ([#50](https://github.com/codeonym-oss/i18n-ai/issues/50)) ([#51](https://github.com/codeonym-oss/i18n-ai/issues/51)) ([79b7edf](https://github.com/codeonym-oss/i18n-ai/commit/79b7edfcb8186ecaa84e9e0c0ba7fb88f620e882))
+
 ## [0.3.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.2.0...v0.3.0) (2026-10-23)
 
 
