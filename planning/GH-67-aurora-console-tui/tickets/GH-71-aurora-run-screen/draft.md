@@ -2,16 +2,34 @@
 
 ## Problem
 
-The run screen is a stock grid and a log; a retry or a dropped file is easy to miss.
+The run screen is a stock grid and a log; a retry or a dropped file is easy to miss, and a run stops only by
+quitting the app.
 
 ## The change
 
-- v2's run screen on the typed progress events there are today (#15 decision 004): the overall progress, each job
-  as a card with its state and attempts, the event feed, a pop-up notice when a file is dropped or the run ends.
-- The receipt at the end, leading to Review when there are fallbacks.
-- Without the time left, the throughput sparkline and the per-call lanes (story decision 001).
+v2's run screen, on the typed progress events there are today (#15 decision 004):
+
+- **The plan's grid, live:** the same files × locales grid as the plan, each cell a job card with its state,
+  its attempts and, once done, its translated and kept counts (decision 001).
+- **The progress card:** the share of the planned messages done, a bar by outcome, the jobs, the messages, the
+  retries, partial and failed jobs, and the time so far (decision 002).
+- **The events feed,** newest on top, with an all / problems switch on `p`; a pop-up for a partial or failed job,
+  a dropped file and the end of the run (decision 003). Under a done job: each fallback with its reason, each
+  warning, and the file it wrote (decision 006).
+- **Stop** on `ctrl+c`: the jobs done stay written, the rest read "stopped" (decision 004).
+- **The end:** the screen becomes the receipt: four figures (files written, translated, fallbacks, failed), the
+  final grid, the feed, and "Run it again" with the command, `y` to copy it, and `v` Review when there are
+  fallbacks (decision 005).
+
+## Not part of it
+
+- The time left, the messages per second and the per-call lanes (story decision 001).
+- A new command, query or event: the screen reads the events and the receipt there are.
+- Rich's receipt table in the TUI; the CLI keeps it.
 
 ## Done when
 
 - [ ] The run's `Pilot` tests carried over: a retry and a dropped file show as they happen.
-- [ ] Snapshots at 160×45 and 80×24, on a scripted series of events.
+- [ ] The progress card, the feed and its `p` switch, the pop-ups, stop, and the receipt have their `Pilot`
+      tests.
+- [ ] Snapshots at 160×45 and 80×24 on a scripted series of events, and one of the receipt.

@@ -16,3 +16,8 @@ Left for later because it predates GH-69 and isn't part of the wizard's change.
 
 Fixing it: when the listing comes back, keep the current pick if it is in the new list, and fall back to the default
 only otherwise. Then put the model-card test in the natural order: pick the model, then give the key.
+
+**Also (seen 2026-11-12, GH-71):** a run started with a key typed in the form gives the key as it
+starts, so the models are listed again and the pick is cleared while the run goes on (the run
+keeps the model it was given). Back from the run, the setup has no model: a second Plan says
+"Pick a model first." GH-71's stop test picks the model again after Back to step around it.

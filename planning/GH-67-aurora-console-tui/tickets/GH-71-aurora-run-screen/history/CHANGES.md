@@ -1,1 +1,7 @@
 - 2026-11-10: tracked as GH-71 (#71).
+- 2026-11-12: ticket pass: decisions 001–005 (the plan's grid live, progress by messages, every event in the feed, stop on ctrl+c, the live screen becomes the receipt); impl.md written.
+- 2026-11-12: draft.md rewritten to match the decisions, with "Not part of it" (history/2026-11-12_0856_draft.md).
+- 2026-11-12: meta.md: planned (history/2026-11-12_0856_meta.md).
+- 2026-11-12: decision 006 (a job's reasons, warnings and path in the feed; supersedes part of 003 and 005, from a side agent's note); impl.md and draft.md updated (history/2026-11-12_0858_impl.md, history/2026-11-12_0858_draft.md).
+- 2026-11-12: meta.md: building on feat/71-aurora-run-screen (history/2026-11-12_0900_meta.md); #71's description updated to draft.md.
+- 2026-11-12: impl.md: corrections while building and the review's outcome (history/2026-11-12_0926_impl.md); follow-up key-clears-the-picked-model gains a second symptom.
