@@ -71,7 +71,7 @@ what is written stays.
 ![A run under way: one file retrying, one partial](tui-run.svg)
 
 At the end the screen is the receipt: the files written, the messages translated, the fallbacks
-and the failures, and the one-line command that repeats the run without the setup (`y` copies
+and the failures, and the one-line command that repeats the run without the setup (`y` asks your terminal to copy
 it). A file turned off is an `--exclude` in that command, a locale turned off is not among its
 targets; single cells have no option of their own, so the receipt says when the command runs them too.
 `b` goes back, `q` quits, `Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.

@@ -157,3 +157,8 @@ reach into the CLI's renderer); `left` beside `review` on `show_receipt`; the `â
 
 Found, not fixed (follow-up `key-clears-the-picked-model`, updated): a key typed for a run clears the picked
 model, so Back finds no model.
+
+**After the pull request opened (a side agent's note):** `y` goes through Textual's `copy_to_clipboard`, an OSC 52
+request the terminal may ignore (GNOME Terminal, macOS Terminal, tmux without its setting), and the app cannot tell.
+The notice no longer says the command is copied: it says the terminal was asked, and points to the command on
+screen. The guide says the same.

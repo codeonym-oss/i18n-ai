@@ -461,8 +461,14 @@ class RunScreen(ShellScreen[None]):
 
     def action_copy(self) -> None:
         if self._again is not None:
+            # Textual asks the terminal to copy it (OSC 52); many terminals ignore the request,
+            # and nothing tells the app whether it was done
             self.app.copy_to_clipboard(self._again)
-            self.notify("The command is copied.")
+            self.notify(
+                "Asked your terminal to copy the command. If it isn't on your clipboard, "
+                "select it in Run it again.",
+                title="Copy",
+            )
 
     def action_review(self) -> None:
         if self._review is not None:

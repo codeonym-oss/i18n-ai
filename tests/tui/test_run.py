@@ -310,6 +310,9 @@ async def test_the_end_is_the_receipt(isolated: Path, vault: object, gateway: Fa
 
         await pilot.press("y")
         assert app.clipboard == "i18n-ai generate locales -t fr -m openai:fake-model"
+        # Sent to the terminal, which may not copy it: the notice does not claim it did
+        notice = str(list(app._notifications)[-1].message)
+        assert notice.startswith("Asked your terminal to copy the command.")
 
 
 async def test_ctrl_c_stops_the_run_and_keeps_what_is_written(

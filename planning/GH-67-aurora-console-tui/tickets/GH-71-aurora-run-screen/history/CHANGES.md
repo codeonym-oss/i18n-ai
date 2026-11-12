@@ -5,3 +5,5 @@
 - 2026-11-12: decision 006 (a job's reasons, warnings and path in the feed; supersedes part of 003 and 005, from a side agent's note); impl.md and draft.md updated (history/2026-11-12_0858_impl.md, history/2026-11-12_0858_draft.md).
 - 2026-11-12: meta.md: building on feat/71-aurora-run-screen (history/2026-11-12_0900_meta.md); #71's description updated to draft.md.
 - 2026-11-12: impl.md: corrections while building and the review's outcome (history/2026-11-12_0926_impl.md); follow-up key-clears-the-picked-model gains a second symptom.
+- 2026-11-12: meta.md: in-review, mr #77 (history/2026-11-12_0939_meta.md).
+- 2026-11-12: impl.md: the copy notice says the terminal was asked (history/2026-11-12_1128_impl.md).
