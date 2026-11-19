@@ -634,8 +634,11 @@ class SetupScreen(ShellScreen[None]):
             card.show(name, picked, key, needs_key, picked in self._recommended)
         self._show_chips()
 
-    async def _list_models(self, provider: str) -> None:
+    async def _list_models(self, provider: str, keep: bool = False) -> None:
+        """The provider's models, the default picked; with `keep`, the model picked before when
+        the new list has it."""
         models = self.query_one("#model", Select)
+        before = models.value
         try:
             listing = await self._mediator.send(ListModelsQuery(provider))
         except REFUSALS as error:
@@ -645,6 +648,8 @@ class SetupScreen(ShellScreen[None]):
             self.notify(f"{listing.problem}; showing the recommended models.")
         self._recommended = {model.id for model in listing.models if model.recommended}
         choices, default = model_choices(listing, provider, self._defaults)
+        if keep and isinstance(before, str) and any(choice.value == before for choice in choices):
+            default = before
         _fill(models, choices, default)
         models.disabled = False
         self._show_model()
@@ -700,7 +705,7 @@ class SetupScreen(ShellScreen[None]):
         self._keyed.add(provider)
         self._show_key(self._providers[provider])
         self._show_model()
-        await self._list_models(provider)
+        await self._list_models(provider, keep=True)
 
     @on(Button.Pressed, "#next")
     def action_plan(self) -> None:
