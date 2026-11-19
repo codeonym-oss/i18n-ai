@@ -1,8 +1,8 @@
 ---
-status: open
+status: done
 from: agent
 found-while: GH-69
-resolved-by:
+resolved-by: GH-84
 ---
 
 # Giving a key clears the picked model
