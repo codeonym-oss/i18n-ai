@@ -1,1 +1,3 @@
 - 2026-11-10: tracked as GH-73 (#73).
+- 2026-11-19: ticket pass: decisions 001–002, impl.md; meta.md: planned (history/2026-11-19_1200_meta.md).
+- 2026-11-19: meta.md: building on feat/73-aurora-command-palette (history/2026-11-19_1305_meta.md).
