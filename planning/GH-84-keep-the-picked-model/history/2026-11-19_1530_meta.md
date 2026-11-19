@@ -1,0 +1,12 @@
+---
+kind: ticket
+title: Giving a key in the TUI's setup clears the picked model
+key: GH-84
+parent:
+status: in-review
+branch: fix/84-keep-the-picked-model
+tracker-url: https://github.com/codeonym-oss/i18n-ai/issues/84
+mr: https://github.com/codeonym-oss/i18n-ai/pull/85
+created: 2026-11-19
+updated: 2026-11-19
+---
