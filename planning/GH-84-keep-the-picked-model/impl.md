@@ -19,4 +19,4 @@ Planned 2026-11-19 against `main` at 7a5557a. No decision of its own: the follow
 
 ## Review
 
-Steps 1–3 done as planned (step 1 seen failing first). `uv run pytest`: see the PR.
+Steps 1–3 done as planned (step 1 seen failing first). `uv run pytest`: 503 passed, 1 timing flake in `test_shell.py` (passes alone; follow-up saved).
