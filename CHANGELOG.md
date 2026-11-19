@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.4.1](https://github.com/codeonym-oss/i18n-ai/compare/v0.4.0...v0.4.1) (2026-11-19)
+
+
+### Bug Fixes
+
+* wait for the TUI screens to draw in the tests ([#89](https://github.com/codeonym-oss/i18n-ai/issues/89)) ([#90](https://github.com/codeonym-oss/i18n-ai/issues/90)) ([f2b9146](https://github.com/codeonym-oss/i18n-ai/commit/f2b9146cf8315e75cc096f40a9cc535b1b176716))
+
+
+### Documentation
+
+* close the picked-model ticket ([#84](https://github.com/codeonym-oss/i18n-ai/issues/84)) ([#86](https://github.com/codeonym-oss/i18n-ai/issues/86)) ([b98cb23](https://github.com/codeonym-oss/i18n-ai/commit/b98cb238b78dcbce745bcf1b60fc7ef2ff8ba903))
+* close the TUI-wait ticket ([#89](https://github.com/codeonym-oss/i18n-ai/issues/89)) ([#91](https://github.com/codeonym-oss/i18n-ai/issues/91)) ([242257d](https://github.com/codeonym-oss/i18n-ai/commit/242257d95baddc8816daf6c2b191cbd3412634fa))
+
+
+### Build
+
+* **deps-dev:** bump the dev-tools group across 1 directory with 6 updates ([#88](https://github.com/codeonym-oss/i18n-ai/issues/88)) ([4fc55b9](https://github.com/codeonym-oss/i18n-ai/commit/4fc55b9391a82a8b5a511a9cd94a85af337da854))
+* **deps:** bump langgraph from 1.2.19 to 1.2.20 ([#81](https://github.com/codeonym-oss/i18n-ai/issues/81)) ([d97a738](https://github.com/codeonym-oss/i18n-ai/commit/d97a7386b663544fd191204b962978ec2d363ed5))
+* **deps:** bump pydantic from 2.14.2 to 2.14.3 ([#79](https://github.com/codeonym-oss/i18n-ai/issues/79)) ([7d7f81b](https://github.com/codeonym-oss/i18n-ai/commit/7d7f81b12cff29696160320fbfc61af8600af3ae))
+* **deps:** bump typer from 0.27.3 to 0.29.1 ([#80](https://github.com/codeonym-oss/i18n-ai/issues/80)) ([58743ac](https://github.com/codeonym-oss/i18n-ai/commit/58743acf1762312e1ce3ae8a65dda2036c4a920a))
+
 ## [0.4.0](https://github.com/codeonym-oss/i18n-ai/compare/v0.3.0...v0.4.0) (2026-11-19)
 
 
