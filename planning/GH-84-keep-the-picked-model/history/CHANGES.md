@@ -1,0 +1,2 @@
+- 2026-11-19: created from the follow-up key-clears-the-picked-model; tracked as #84; impl.md; meta.md: building on fix/84-keep-the-picked-model.
+- 2026-11-19: meta.md: in-review, mr #85 (history/2026-11-19_1510_meta.md).

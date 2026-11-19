@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from textual.app import App, ComposeResult
 from textual.pilot import Pilot
-from textual.widgets import Static
+from textual.widgets import Select, Static
 
 from i18n_ai.application.exports.locale import (
     FileResult,
@@ -27,7 +27,6 @@ from support.fakes import FakeGateway
 from support.tui import (
     ended,
     on_cell,
-    pick,
     planning,
     post,
     ready,
@@ -352,8 +351,7 @@ async def test_ctrl_c_stops_the_run_and_keeps_what_is_written(
         await settle(pilot)
         assert isinstance(app.screen, SetupScreen)
         held.set()
-        # The key given for the run lists the models again, and clears the pick (a follow-up)
-        await pick(pilot, "#model", "fake-model")
+        assert app.screen.query_one("#model", Select).value == "fake-model"  # kept after the key
         await planning(pilot)
         await pilot.press("ctrl+r")
         again = await ended(pilot)  # a fresh run goes again

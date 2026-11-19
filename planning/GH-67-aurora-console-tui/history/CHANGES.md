@@ -1,2 +1,3 @@
 - 2026-11-10: grilled (decisions 001–007), drafted the story and its six tickets.
 - 2026-11-10: tracked as GH-67 (#67).
+- 2026-11-19: meta.md: done, its six tickets merged (#74–#77, #82, #83) (history/2026-11-19_1430_meta.md).

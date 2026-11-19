@@ -176,12 +176,12 @@ async def test_the_model_card_says_the_keys_state(isolated: Path) -> None:
         await pick(pilot, "#provider", "openai")
         card = app.screen.query_one("#model-card", ModelCard)
         assert card.text == "openai / … · key needed"
+        await pick(pilot, "#model", "fake-model")
 
         key = app.screen.query_one("#key", Input)
         key.value = "sk-test"
         await key.action_submit()
         await settle(pilot)
-        await pick(pilot, "#model", "fake-model")
 
         assert card.text == "openai / fake-model · ✓ set (for this run)"
         assert app.screen.query_one("#run-model", ModelCard).text == card.text
