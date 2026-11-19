@@ -76,6 +76,13 @@ it). A file turned off is an `--exclude` in that command, a locale turned off is
 targets; single cells have no option of their own, so the receipt says when the command runs them too.
 `b` goes back, `q` quits, `Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.
 
+The review lists the tree's fallbacks; beside the list, the one under the cursor: its source, the
+model's last attempt with the rules it broke, its text in the file now, and the same message in
+the tree's other locales. `e` goes into the editor: `Enter` checks the text, writes it only when it
+keeps to the rules and moves on to the next fallback, and `Esc` comes back to the list. `Space`
+marks fallbacks; `r` translates the marked ones (or the one under the cursor) again with the
+setup's model, and `a` accepts them as they are.
+
 ### The prompts
 
 `i18n-ai generate` at a terminal asks for what it was not told, one question at a time:

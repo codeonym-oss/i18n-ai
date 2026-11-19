@@ -139,3 +139,36 @@ ShellScreen.-narrow .cell-short { display: block; }
 #done-label { color: $text-muted; text-style: bold; }
 #done-percent { text-style: bold; color: $primary; }
 .event { margin-bottom: 1; }
+
+/* The review screen: the list, the fallback under the cursor compared, its editor, the other locales */
+ReviewScreen #review { height: 1fr; }
+ReviewScreen #fallbacks { width: 46; height: 1fr; }
+ReviewScreen #focus { width: 1fr; height: auto; margin: 0 1; }
+ReviewScreen #head { height: 1; margin-bottom: 1; }
+ReviewScreen #where { width: 1fr; text-style: bold; text-wrap: nowrap; text-overflow: ellipsis; }
+ReviewScreen #rule { margin-left: 1; }
+ReviewScreen #position { width: auto; margin-left: 1; color: $text-muted; }
+ReviewScreen #cards { grid-size: 3; grid-gutter: 0 1; grid-rows: auto; height: auto; }
+ReviewScreen #cards .card { min-height: 5; }
+.compared, .compared-text { height: auto; }
+ReviewScreen #model { border: round $warning 50%; }
+ReviewScreen .label { display: none; width: 8; color: $text-muted; text-style: bold; }
+ReviewScreen .problem { color: $warning; }
+ReviewScreen .problem.-none { display: none; }
+ReviewScreen #editor { border: round $primary 50%; border-title-color: $primary; }
+ReviewScreen #check { color: $warning; }
+ReviewScreen #check.-refused { color: $error; }
+ReviewScreen #elsewhere { width: 28; }
+ReviewScreen #hint, ReviewScreen #empty { padding: 0 1; color: $text-muted; }
+ReviewScreen.-narrow #review { layout: vertical; }
+ReviewScreen.-narrow #fallbacks { width: 1fr; height: auto; max-height: 6; }
+ReviewScreen.-narrow #focus { margin: 0; }
+ReviewScreen.-narrow #head { margin: 0; }
+ReviewScreen.-narrow #cards {
+    grid-size: 1; grid-gutter: 0; background: $surface; border: round $border;
+}
+ReviewScreen.-narrow #cards .card { min-height: 1; height: 1; border: none; padding: 0 1; }
+ReviewScreen.-narrow .label { display: block; }
+ReviewScreen.-narrow .text { text-wrap: nowrap; text-overflow: ellipsis; }
+ReviewScreen.-narrow .problem { display: none; }
+ReviewScreen.-narrow #elsewhere { width: 1fr; }

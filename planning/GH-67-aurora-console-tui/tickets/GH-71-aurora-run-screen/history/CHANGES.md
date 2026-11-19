@@ -7,3 +7,4 @@
 - 2026-11-12: impl.md: corrections while building and the review's outcome (history/2026-11-12_0926_impl.md); follow-up key-clears-the-picked-model gains a second symptom.
 - 2026-11-12: meta.md: in-review, mr #77 (history/2026-11-12_0939_meta.md).
 - 2026-11-12: impl.md: the copy notice says the terminal was asked (history/2026-11-12_1128_impl.md).
+- 2026-11-12: meta.md: done, #77 merged (history/2026-11-12_1537_meta.md).
