@@ -785,11 +785,11 @@ class SetupScreen(ShellScreen[None]):
         try:
             receipt = await self._mediator.send(command)
         except REFUSALS as error:
-            screen.stopped(error.message)
+            screen.call_later(screen.stopped, error.message)
             return
         except asyncio.CancelledError:
             # Stopped by hand: what is written stays, and the record of its fallbacks
-            screen.halted(again, note if plan.skip else None)
+            screen.call_later(screen.halted, again, note if plan.skip else None)
             raise
         finally:
             self._progress.target = None
@@ -799,7 +799,10 @@ class SetupScreen(ShellScreen[None]):
         except REFUSALS:
             left = ()
         review = (lambda: self.shell.open_review(request, ModelSpec(spec))) if left else None
-        screen.show_receipt(receipt, again, note if plan.skip else None, review, len(left))
+        # Queued behind the run's last events, which reach the screen as messages
+        screen.call_later(
+            screen.show_receipt, receipt, again, note if plan.skip else None, review, len(left)
+        )
 
     async def _in_run(self) -> None:
         """The Run section shown, for a screen pushed on it: another section may have been

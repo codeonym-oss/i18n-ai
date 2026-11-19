@@ -1,5 +1,6 @@
 """The TUI, driven with Textual's pilot in a copy of the examples, with the fake model."""
 
+import time
 from pathlib import Path
 
 import pytest
@@ -7,10 +8,11 @@ from textual.widgets import ContentSwitcher, Input, Select, Static
 from textual.widgets.select import InvalidSelectValueError
 
 from i18n_ai.cli.tui.confirm import ConfirmScreen
+from i18n_ai.cli.tui.kit.palette import PaletteScreen
 from i18n_ai.cli.tui.kit.widgets import LocaleCard
 from i18n_ai.cli.tui.setup import SetupScreen
 from support.fakes import InstalledCatalog
-from support.tui import pick, running, settle, tui
+from support.tui import arrived, drawn, pick, running, settle, tui
 
 
 async def test_the_setup_starts_from_the_projects_preset(isolated: Path) -> None:
@@ -56,8 +58,7 @@ async def test_declining_the_install_goes_back_to_the_setup(
         await pick(pilot, "#model", "ollama-pick")
 
         await pilot.press("ctrl+r")
-        await pilot.pause(0.2)
-        assert isinstance(app.screen, ConfirmScreen)
+        await arrived(pilot, ConfirmScreen)
         assert "needs langchain-ollama" in str(app.screen.question)
         await pilot.press("n")
         await settle(pilot)
@@ -133,10 +134,14 @@ async def test_the_palette_quits(isolated: Path) -> None:
         await running(pilot)
 
         await pilot.press("ctrl+p")
+        await arrived(pilot, PaletteScreen)
         await pilot.press(*"quit")
-        await pilot.pause(0.3)
+        await drawn(pilot)
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await app.workers.wait_for_complete()
+        deadline = time.monotonic() + 10
+        while app.is_running and time.monotonic() < deadline:
+            await pilot.pause(0.05)
 
         assert not app.is_running
 

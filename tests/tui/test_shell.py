@@ -18,7 +18,7 @@ from i18n_ai.cli.tui.run import RunScreen
 from i18n_ai.cli.tui.setup import SetupScreen
 from i18n_ai.runtime.answers import Answers, save_answers
 from support.fakes import FakeGateway
-from support.tui import ended, planning, ready, settle, tui
+from support.tui import arrived, ended, planning, ready, settle, tui
 
 
 async def test_the_app_is_aurora_and_offers_no_other_theme(isolated: Path) -> None:
@@ -111,9 +111,7 @@ async def test_a_run_goes_on_while_home_shows_and_is_there_on_return(
         await ready(pilot)
         await planning(pilot)
         await pilot.press("ctrl+r")
-        await pilot.pause(0.3)
-        run = app.screen
-        assert isinstance(run, RunScreen)
+        run = await arrived(pilot, RunScreen)
         assert not run.done
 
         await pilot.press("ctrl+o")
@@ -159,10 +157,9 @@ async def test_a_plan_shows_in_run_when_another_section_was_picked_meanwhile(
         await pilot.pause()
         assert isinstance(app.screen, HomeScreen)
         scanned.set()
-        await pilot.pause(0.3)
+        await arrived(pilot, PlanScreen)
 
         assert app.current_mode == "run"
-        assert isinstance(app.screen, PlanScreen)
 
 
 async def test_a_runs_review_retries_with_its_model_and_b_goes_back_to_the_run(
@@ -247,9 +244,7 @@ async def test_the_switcher_moves_home_and_the_setup_but_not_a_run_going(
         await ready(pilot)
         await planning(pilot)
         await pilot.press("ctrl+r")
-        await pilot.pause(0.3)
-        run = app.screen
-        assert isinstance(run, RunScreen)
+        run = await arrived(pilot, RunScreen)
         run.query_one("#switcher", Select).value = "bundle/i18n.json"
         await pilot.pause()
 

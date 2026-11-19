@@ -25,6 +25,7 @@ from i18n_ai.cli.tui.setup import SetupScreen
 from i18n_ai.domain.exports.locale import KeyPath, Violation, ViolationCode
 from support.fakes import FakeGateway
 from support.tui import (
+    drawn,
     ended,
     on_cell,
     planning,
@@ -242,6 +243,7 @@ async def showing(pilot: Pilot[None], text: str, every: bool = False) -> RunScre
         if isinstance(screen, RunScreen) and screen.is_mounted:
             states = [cell for row in cells(screen) for cell in row[1:]]
             if (all if every else any)(state == text for state in states):
+                await drawn(pilot)
                 return screen
         await pilot.pause(0.05)
     raise AssertionError(f"no cell reads {text!r}")
