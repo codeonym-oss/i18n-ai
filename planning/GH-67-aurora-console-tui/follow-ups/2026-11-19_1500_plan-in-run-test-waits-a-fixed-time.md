@@ -1,8 +1,8 @@
 ---
-status: open
+status: done
 from: agent
 found-while: GH-84
-resolved-by:
+resolved-by: GH-89
 ---
 
 # A shell test waits a fixed 0.3 s for the plan to show

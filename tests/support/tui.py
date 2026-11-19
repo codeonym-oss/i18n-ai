@@ -3,10 +3,12 @@
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Any
 
 from mediary import Mediator
 from rich.console import Console
 from textual.pilot import Pilot
+from textual.screen import Screen
 from textual.widgets import Input, Select
 
 from i18n_ai.application.exports.locale import (
@@ -39,11 +41,51 @@ def tui(project: Path, model: str | None = None, attempts: int = 3) -> I18nAiApp
     return I18nAiApp(settings, project)
 
 
+def _widgets(pilot: Pilot[None]) -> tuple[int, ...] | None:
+    """The screen's widgets, None while one of them is not yet mounted (its children not yet
+    composed)."""
+    widgets = list(pilot.app.screen.walk_children(with_self=True))
+    if not all(widget.is_mounted for widget in widgets):
+        return None
+    return tuple(id(widget) for widget in widgets)
+
+
+async def drawn(pilot: Pilot[None], seconds: float = 10) -> None:
+    """Until the screen is drawn: every widget on it mounted, and a round of its messages that
+    mounts or removes none. A slow machine composes a widget's children well after the widget
+    is in the screen, and a handler rebuilds a list after the message that asked for it."""
+    deadline = time.monotonic() + seconds
+    before = None
+    while time.monotonic() < deadline:
+        await pilot.pause()
+        now = _widgets(pilot)
+        if now is not None and now == before:
+            return
+        before = now
+    raise AssertionError(f"{type(pilot.app.screen).__name__} is still drawing")
+
+
 async def settle(pilot: Pilot[None]) -> None:
-    """Until no worker is running and the messages are handled."""
-    await pilot.pause()
-    await pilot.app.workers.wait_for_complete()
-    await pilot.pause()
+    """Until no worker is running and the screen is drawn."""
+    while True:
+        await pilot.pause()
+        await pilot.app.workers.wait_for_complete()
+        await drawn(pilot)
+        if all(worker.is_finished for worker in pilot.app.workers):
+            return
+
+
+async def arrived[S: Screen[Any]](pilot: Pilot[None], kind: type[S], seconds: float = 10) -> S:
+    """The screen on top once it is a `kind` and drawn; for a screen a worker waits on, which
+    `settle` would wait for too."""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        screen = pilot.app.screen
+        if isinstance(screen, kind) and screen.is_mounted:
+            await drawn(pilot)
+            return screen
+        await pilot.pause(0.05)
+    raise AssertionError(f"no {kind.__name__} (on {type(pilot.app.screen).__name__})")
 
 
 async def pick(pilot: Pilot[None], selector: str, value: str) -> None:
@@ -76,14 +118,14 @@ async def scripted(
         report, planned(files, codes, off or set()), "i18next/locales", lambda: times[-1]
     )
     await app.push_screen(run)
-    await pilot.pause()
+    await drawn(pilot)
     return run, times
 
 
 async def post(pilot: Pilot[None], run: RunScreen, *events: ProgressEvent) -> None:
     for event in events:
         run.post_message(TuiProgress.Event(event))
-    await pilot.pause()
+    await drawn(pilot)
 
 
 async def ended(pilot: Pilot[None], seconds: float = 10) -> RunScreen:
@@ -92,6 +134,7 @@ async def ended(pilot: Pilot[None], seconds: float = 10) -> RunScreen:
     while time.monotonic() < deadline:
         screen = pilot.app.screen
         if isinstance(screen, RunScreen) and screen.done:
+            await drawn(pilot)
             return screen
         await pilot.pause(0.05)
     raise AssertionError(f"the run did not end (on {type(pilot.app.screen).__name__})")
@@ -101,14 +144,7 @@ async def planning(pilot: Pilot[None], seconds: float = 10) -> PlanScreen:
     """The plan screen, from the setup's Plan; the setup's worker waits on it, so it is polled
     for, not settled."""
     await pilot.press("ctrl+r")
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        screen = pilot.app.screen
-        if isinstance(screen, PlanScreen) and screen.is_mounted:
-            await pilot.pause()
-            return screen
-        await pilot.pause(0.05)
-    raise AssertionError(f"no plan (on {type(pilot.app.screen).__name__})")
+    return await arrived(pilot, PlanScreen, seconds)
 
 
 async def pick_targets(pilot: Pilot[None], *codes: str) -> None:

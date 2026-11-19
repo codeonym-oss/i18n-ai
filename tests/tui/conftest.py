@@ -11,7 +11,7 @@ from textual.widgets import Footer
 from i18n_ai.cli.tui import I18nAiApp
 from i18n_ai.di import bootstrap
 from support.fakes import FakeGateway, FakeModel
-from support.tui import Snap, settle
+from support.tui import Snap, drawn, settle
 
 KEYS = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY")
 
@@ -64,9 +64,10 @@ def snap(snapshot: SnapshotAssertion) -> Snap:
             await settle(pilot)
             if setup is not None:
                 # Not `settle`: a screen pushed from a worker (the plan) holds that worker until
-                # it closes, so waiting for every worker would never end; each step settles itself
+                # it closes, so waiting for every worker would never end; `drawn` waits for the
+                # screen alone
                 await setup(pilot)
-                await pilot.pause()
+                await drawn(pilot)
             await footed(pilot)
             svg = app.export_screenshot(title="i18n-ai")
         assert svg == snapshot.use_extension(SvgSnapshot)
