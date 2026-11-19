@@ -175,3 +175,19 @@ async def test_run_ended(isolated: Path, snap: Snap) -> None:
 
 async def test_a_small_terminal(isolated: Path, snap: Snap) -> None:
     await snap(tui(isolated), (70, 20))
+
+
+async def to_review(pilot: Pilot[None]) -> None:
+    """The review of two fallbacks, the first marked."""
+    await pilot.press("v")
+    await settle(pilot)
+    await pilot.press("space")
+    await settle(pilot)
+
+
+@pytest.mark.parametrize("size", SIZES, ids=["160x45", "80x24"])
+async def test_review(
+    isolated: Path, snap: Snap, size: tuple[int, int], gateway: FakeGateway
+) -> None:
+    await fallen(isolated, gateway, "app.welcome", "cart.total")
+    await snap(tui(isolated), size, to_review)

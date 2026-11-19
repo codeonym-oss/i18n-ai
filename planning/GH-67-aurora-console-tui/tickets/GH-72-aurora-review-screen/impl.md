@@ -41,7 +41,7 @@ Planned 2026-11-19 against `main` at c5f2a15. Ticket decisions 001–005; story 
 2. **The screen's layout and header.** `#review`, the three cards, the header, `#elsewhere`; `EditScreen` goes.
    → check: the TUI review tests: the header, the cards' text, the elsewhere panel.
 3. **The editor.** `tab`/`e` into it, `enter` saves, refused shows the violations, `escape` back to the list.
-   → check: the moved tests (`tests/tui/test_review.py`): an edit is checked then written; a run that leaves a
+   → check: the moved tests (`tests/tui/test_review_screen.py`): an edit is checked then written; a run that leaves a
    fallback opens its review and an edit fixes it; escape leaves the editor, then the screen.
 4. **Retry, accept, stale carried over.** → check: the moved tests pass.
 5. **Snapshots** at 160×45 and 80×24 (`test_review`). → check: they look as the design, nothing cut at 80×24.
@@ -51,3 +51,23 @@ Planned 2026-11-19 against `main` at c5f2a15. Ticket decisions 001–005; story 
 
 - `escape` is the screen's Back: the editor must take it first.
 - The 80×24 layout: the cards, editor and panel must fit under a six-row list.
+
+## Corrections while building
+
+- The review's rules are in `aurora.tcss` ("The review screen"), not the screen's `DEFAULT_CSS`: the app's sheet
+  wins over a default one whatever its specificity, so the narrow rules for `.card` did not apply (story decision
+  003 wants them there anyway).
+- The cards are titled `Source`, `Last attempt` and `In the file` (`SOURCE`, `MODEL`, `NOW` when narrow): at
+  160×45 `Model · last attempt` and `In the file now` were cut by their cards' width (decisions 001, 003 name them
+  so).
+- The list drops its `Current` column: the text now is in its card, and the list is 46 columns wide.
+- `tab` needs no binding: it moves from the list to the editor as the next focus.
+- The TUI tests are in `tests/tui/test_review_screen.py`: `test_review.py` is the integration tests' name, and
+  pytest refuses two modules of one name.
+- The query's view tests: `fr`'s text beside an `it` fallback, `None` once `fr` lacks the message, none for a stale
+  entry, and a mixed tree with `*.yml` excluded (the follow-up's test).
+
+## Review
+
+Read the diff against the decisions: nothing outside the ticket; the follow-up `review-scan-loses-the-format` is
+fixed and can be closed with it. `uv run pytest`: 494 passed, 18 snapshots; `ruff`, `mypy` clean.

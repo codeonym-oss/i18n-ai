@@ -1,8 +1,8 @@
 ---
-status: open
+status: done
 from: agent
 found-while: GH-62
-resolved-by:
+resolved-by: GH-72
 ---
 
 # The review's scan can refuse a mixed tree that `generate` reads

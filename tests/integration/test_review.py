@@ -104,8 +104,50 @@ async def test_an_entry_whose_message_is_gone_is_stale(examples: Path) -> None:
 
     (entry,) = view.entries
     assert entry.stale
-    assert (entry.ref, entry.source) == (None, None)
+    assert (entry.ref, entry.source, entry.elsewhere) == (None, None, ())
     assert entry.entry.path == WELCOME
+
+
+async def test_the_same_message_in_the_other_locales_is_beside_it(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    await fallen(Stubborn(), locales, "it")
+
+    view = await send(FakeGateway(), ListFallbacksQuery(TreeRequest(locales / "en")))
+
+    (entry,) = view.entries
+    assert entry.elsewhere == ((LocaleCode("fr"), "Bon retour, {{nom}} !"),)
+
+
+async def test_a_locale_without_the_message_has_no_text_beside_it(examples: Path) -> None:
+    locales = examples / "i18next" / "locales"
+    await fallen(Stubborn(), locales, "it")
+    french = locales / "fr" / "common.json"
+    content = read(french)
+    del content["app"]["welcome"]
+    french.write_text(json.dumps(content), encoding="utf-8")
+
+    view = await send(FakeGateway(), ListFallbacksQuery(TreeRequest(locales / "en")))
+
+    (entry,) = view.entries
+    assert entry.elsewhere == ((LocaleCode("fr"), None),)
+
+
+async def test_a_mixed_tree_with_a_format_excluded_still_lists_its_fallbacks(
+    examples: Path,
+) -> None:
+    locales = examples / "i18next" / "locales"
+    await fallen(Stubborn(), locales, "it")
+    (locales / "en" / "extra.yml").write_text("greeting: Hello\n")
+
+    view = await send(
+        FakeGateway(),
+        ListFallbacksQuery(
+            TreeRequest(locales / "en", include=("common.json",), exclude=("*.yml",))
+        ),
+    )
+
+    (entry,) = view.entries
+    assert not entry.stale
 
 
 async def test_a_tree_without_a_record_has_nothing_to_review(examples: Path) -> None:
