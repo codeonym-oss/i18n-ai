@@ -58,4 +58,4 @@ Planned 2026-11-19 against `main` after GH-72 (#82). Ticket decisions 001–002;
 
 ## Review
 
-Read the diff against the decisions: nothing outside the ticket. `uv run pytest`, `ruff`, `mypy`: see the PR.
+Read the diff against the decisions: nothing outside the ticket. `uv run pytest`: 504 passed, 20 snapshots; `ruff`, `mypy` clean.

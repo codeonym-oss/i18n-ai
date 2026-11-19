@@ -74,7 +74,11 @@ At the end the screen is the receipt: the files written, the messages translated
 and the failures, and the one-line command that repeats the run without the setup (`y` asks your terminal to copy
 it). A file turned off is an `--exclude` in that command, a locale turned off is not among its
 targets; single cells have no option of their own, so the receipt says when the command runs them too.
-`b` goes back, `q` quits, `Ctrl+P` opens the command palette. `i18n-ai tui` opens it too.
+`b` goes back, `q` quits. `i18n-ai tui` opens it too.
+
+`Ctrl+P` opens the palette: the commands, the tree's locales and its files, each with its key.
+`>` keeps the commands, `@` the locales and `#` the files; the rest is searched. A locale starts a
+run into it, a file shows its coverage on Home.
 
 The review lists the tree's fallbacks; beside the list, the one under the cursor: its source, the
 model's last attempt with the rules it broke, its text in the file now, and the same message in

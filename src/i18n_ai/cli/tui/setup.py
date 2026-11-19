@@ -157,6 +157,7 @@ class SetupScreen(ShellScreen[None]):
         self._locales: tuple[LocaleView, ...] = ()
         self._targets: list[Choice] = []
         self._checked: set[str] = set()
+        self._wanted: str | None = None  # a target picked before the scan ended
         self._in_tree: set[str] = set()  # the targets the tree already has
         self._done: dict[str, int] = {}  # their share translated
         self._messages = 0  # in the source, what a new locale needs
@@ -332,6 +333,9 @@ class SetupScreen(ShellScreen[None]):
         self._targets, self._checked = locale_choices(
             self._locales, found.existing, found.source, self._last
         )
+        if self._wanted is not None:
+            self._checked.add(self._wanted)
+            self._wanted = None
         # The tree's locales first, then those picked last time
         self._targets.sort(
             key=lambda choice: (
@@ -470,6 +474,18 @@ class SetupScreen(ShellScreen[None]):
     def action_search(self) -> None:
         self.step = "targets"
         self.call_after_refresh(self.query_one("#search", Input).focus)
+
+    async def pick(self, code: str) -> None:
+        """`code` picked as a target and the targets shown; once the tree is scanned when it is
+        not yet."""
+        self.step = "targets"
+        if not self._source:
+            self._wanted = code
+            return
+        self._checked.add(code)
+        await self._show_targets()
+        self._show_chips()
+        self._plan()
 
     def _model(self) -> ModelSpec | None:
         """The form's model, once its provider and model are picked."""

@@ -27,9 +27,12 @@ async def test_the_app_is_aurora_and_offers_no_other_theme(isolated: Path) -> No
         await settle(pilot)
 
         assert app.theme == "aurora"
-        titles = [command.title for command in app.get_system_commands(app.screen)]
-        assert "Theme" not in titles
-        assert "Quit" in titles
+        await pilot.press("ctrl+p")
+        await settle(pilot)
+        results = app.screen.query_one("#palette-results", OptionList)
+        titles = [str(results.get_option_at_index(i).prompt) for i in range(results.option_count)]
+        assert not [title for title in titles if "Theme" in title or "Keys" in title]
+        assert [title for title in titles if "Quit" in title]
 
 
 def sidebar(screen: ShellScreen) -> list[str]:

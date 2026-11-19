@@ -3,12 +3,15 @@ Every query and command goes through the mediator, in Textual's loop; nothing pr
 terminal it draws on: the console is quiet, the progress is the TUI's own, and the logs go to
 Textual's."""
 
+import inspect
 import logging
 from collections.abc import Callable, Iterable
+from functools import partial
 from pathlib import Path
 
 from mediary import Mediator
 from rich.console import Console
+from textual import work
 from textual.app import App, SystemCommand
 from textual.binding import Binding
 from textual.logging import TextualHandler
@@ -16,15 +19,19 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Select
 
+from ...application.exports.locale import ScanLocaleTreeQuery
 from ...application.ports.locale import TreeRequest
 from ...di import Bootstrap
+from ...domain.exports.locale import LocaleCode, SourceLocaleUnknown
 from ...domain.exports.provider import ModelSpec
 from ...runtime.answers import load_answers
 from ...runtime.settings import Settings
 from ..common.setup import generation_options, within
 from .aurora import AURORA
 from .home import HomeScreen
-from .plan import PlanScreen
+from .kit.palette import PaletteEntry, PaletteScreen
+from .kit.shell import SECTIONS
+from .plan import PlanScreen, count
 from .progress import TuiProgress
 from .refusals import REFUSALS
 from .review import ReviewScreen
@@ -174,8 +181,96 @@ class I18nAiApp(App[None]):
             yield SystemCommand(
                 "Review fallbacks", "Edit, retry or accept them", screen.action_review
             )
-        # One theme: Textual's others are not offered
-        yield from (c for c in super().get_system_commands(screen) if c.title != "Theme")
+
+    def action_command_palette(self) -> None:
+        """The palette: the commands, then the tree's locales and its files."""
+        if not isinstance(self.screen, PaletteScreen):
+            self._palette()
+
+    @work(exclusive=True, group="palette")
+    async def _palette(self) -> None:
+        entries = [*self._commands(self.screen), *await self._places()]
+        self.push_screen(PaletteScreen(entries), self._chosen)
+
+    async def _chosen(self, entry: PaletteEntry | None) -> None:
+        if entry is not None:
+            done = entry.run()
+            if inspect.isawaitable(done):
+                await done
+
+    def _commands(self, screen: Screen[object]) -> Iterable[PaletteEntry]:
+        """The sections, the screen's own commands with their keys, and Quit."""
+        for name, (glyph, label, action, _) in SECTIONS.items():
+            hint, key = _SECTIONS[name]
+            yield PaletteEntry(
+                "Commands", glyph, label, hint, key, getattr(self, f"action_{action}")
+            )
+        keys = {
+            binding.action: binding.key
+            for binding in screen.BINDINGS
+            if isinstance(binding, Binding)
+        }
+        for command in self.get_system_commands(screen):
+            action = getattr(command.callback, "__name__", "").removeprefix("action_")
+            yield PaletteEntry(
+                "Commands", "›", command.title, command.help, keys.get(action, ""), command.callback
+            )
+        yield PaletteEntry("Commands", "✕", "Quit", "Leave i18n-ai", "q", self.exit)
+
+    async def _places(self) -> list[PaletteEntry]:
+        """The target locales and the source files of the tree Home shows."""
+        request = self.tree_request()
+        if request is None:
+            return []
+        try:
+            found = await self.mediator.send(ScanLocaleTreeQuery(request))
+        except (SourceLocaleUnknown, *REFUSALS):
+            return []
+        locales = [
+            PaletteEntry(
+                "Go to",
+                "◍",
+                code,
+                f"{LocaleCode(code).display_name} · a run into it",
+                "",
+                partial(self.run_into, code),
+            )
+            for code in found.existing
+            if code != found.source
+        ]
+        files = [
+            PaletteEntry(
+                "Files",
+                "▤",
+                file.name,
+                f"{count(file.messages, 'message')} · its coverage",
+                "",
+                partial(self.show_file, file.name),
+            )
+            for file in found.qualified
+        ]
+        return locales + files
+
+    async def run_into(self, code: str) -> None:
+        """Run, its setup with `code` picked; a run under way is only shown."""
+        await self.switch_mode("run")
+        stack = self.get_screen_stack("run")
+        if len(stack) == 1 and isinstance(stack[0], SetupScreen):
+            await stack[0].pick(code)
+
+    async def show_file(self, name: str) -> None:
+        """Home, `name`'s coverage lit."""
+        await self.switch_mode("home")
+        if isinstance(self.screen, HomeScreen):
+            self.screen.spotlight(name)
+
+
+# A section: its hint and its key in the palette
+_SECTIONS = {
+    "home": ("The tree at a glance", "ctrl+o"),
+    "run": ("Set up a new run", "ctrl+n"),
+    "review": ("The tree's fallbacks", "v"),
+}
 
 
 def run_tui(settings: Settings, project: Path) -> None:

@@ -172,3 +172,15 @@ ReviewScreen.-narrow .label { display: block; }
 ReviewScreen.-narrow .text { text-wrap: nowrap; text-overflow: ellipsis; }
 ReviewScreen.-narrow .problem { display: none; }
 ReviewScreen.-narrow #elsewhere { width: 1fr; }
+
+/* The palette: a search box over the screen, its results by group */
+PaletteScreen { align: center top; background: $background 60%; }
+#palette-box {
+    width: 84; max-width: 100%; height: auto; max-height: 80%; margin-top: 2; padding: 0 1;
+    background: $surface; border: round $primary 60%;
+}
+#palette-input { margin-bottom: 1; background: $surface; }
+#palette-results { height: auto; max-height: 20; background: $surface; border: none; }
+#palette-keys { color: $text-muted; padding: 0 1; }
+.heat-head.-lit { color: $primary; text-style: bold underline; }
+.heat.-lit { text-style: bold underline; }

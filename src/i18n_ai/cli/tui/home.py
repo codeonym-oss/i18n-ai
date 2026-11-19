@@ -52,6 +52,10 @@ class HomeScreen(ShellScreen[None]):
     """
     SECTION = "home"
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._lit: str | None = None  # the file whose coverage is lit
+
     def body(self) -> ComposeResult:
         yield Static("", id="home-empty", markup=False)
         yield Vertical(id="home")
@@ -70,6 +74,12 @@ class HomeScreen(ShellScreen[None]):
         self._load()
 
     def _tree_switched(self) -> None:
+        self._lit = None
+        self._load()
+
+    def spotlight(self, file: str) -> None:
+        """The coverage with `file`'s column lit."""
+        self._lit = file
         self._load()
 
     @work(exclusive=True, group="home")
@@ -103,7 +113,7 @@ class HomeScreen(ShellScreen[None]):
         banner.display = bool(entries)
         if report is None:
             return
-        await home.mount_all([_figures(report, entries), _coverage(report, entries)])
+        await home.mount_all([_figures(report, entries), _coverage(report, entries, self._lit)])
         one = len(entries) == 1
         text = f"{count(len(entries), 'fallback')} kept {'its' if one else 'their'} source text"
         self.query_one("#banner-text", Static).update(text)
@@ -147,11 +157,13 @@ def _figures(report: ScanReport, entries: tuple[FallbackView, ...]) -> Grid:
     )
 
 
-def _coverage(report: ScanReport, entries: tuple[FallbackView, ...]) -> Card:
+def _coverage(report: ScanReport, entries: tuple[FallbackView, ...], lit: str | None) -> Card:
     """A row per target locale, a column per file: each cell's share of messages translated,
-    and its fallbacks."""
+    and its fallbacks; the `lit` file's column lit."""
     files = [file.name for file in report.qualified]
-    cells: list[Widget] = [Static(""), *(_head(name) for name in files), _head("TOTAL", "total")]
+    cells: list[Widget] = [Static("")]
+    cells += [_head(name).set_class(name == lit, "-lit") for name in files]
+    cells.append(_head("TOTAL", "total"))
     for target in report.targets:
         by_file = {cell.file: cell for cell in target.files}
         locale = f"[b $primary]{target.locale}[/] [$text-muted]{escape(target.name)}[/]"
@@ -159,11 +171,12 @@ def _coverage(report: ScanReport, entries: tuple[FallbackView, ...]) -> Card:
         for name in files:
             cell = by_file.get(name)
             if cell is None:
-                cells.append(HeatCell(0))
+                cells.append(HeatCell(0).set_class(name == lit, "-lit"))
                 continue
             fallen = sum(_in(view, cell, report.output) for view in entries)
             share = percent(cell.reusable, cell.reusable + cell.to_translate)
-            cells.append(HeatCell(share, f"◐ {fallen}" if fallen else ""))
+            heat = HeatCell(share, f"◐ {fallen}" if fallen else "")
+            cells.append(heat.set_class(name == lit, "-lit"))
         done = sum(cell.reusable for cell in target.files)
         messages = done + target.to_translate
         cells.append(Static(f"{done}/{messages}", classes="heat-total"))
