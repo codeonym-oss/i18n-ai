@@ -2,3 +2,4 @@
 - 2026-11-19: ticket pass: decisions 001–005, impl.md; meta.md: planned (history/2026-11-19_1000_meta.md).
 - 2026-11-19: meta.md: building on feat/72-aurora-review-screen (history/2026-11-19_1005_meta.md).
 - 2026-11-19: impl.md: corrections while building and the review (history/2026-11-19_1130_impl.md).
+- 2026-11-19: meta.md: in-review, mr #82 (history/2026-11-19_1140_meta.md).
