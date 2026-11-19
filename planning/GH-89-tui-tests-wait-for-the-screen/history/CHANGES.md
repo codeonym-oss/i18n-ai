@@ -1,3 +1,4 @@
 - 2026-11-19: created from the flaky CI runs and the follow-up plan-in-run-test-waits-a-fixed-time; tracked as #89; meta.md: building on fix/89-tui-tests-wait-for-the-screen.
 - 2026-11-19: impl.md written with its review; draft.md updated for the app's ordering fix (copy in history/); the follow-up plan-in-run-test-waits-a-fixed-time closed, resolved-by GH-89.
 - 2026-11-19: meta.md: in-review, mr #90 (copy in history/).
+- 2026-11-19: meta.md: done, merged as #90 (copy in history/).
