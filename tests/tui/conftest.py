@@ -76,8 +76,10 @@ def snap(snapshot: SnapshotAssertion) -> Snap:
 
 async def footed(pilot: Pilot[None], seconds: float = 5) -> None:
     """Until the footer shows its keys: it recomposes after a refresh, removing them first, and
-    a slow machine can take the screenshot in between."""
-    footer = pilot.app.screen.query_one(Footer)
+    a slow machine can take the screenshot in between. Under a pop-up (the palette), the footer
+    is the screen's below it."""
+    screen = next(s for s in reversed(pilot.app.screen_stack) if s.query(Footer))
+    footer = screen.query_one(Footer)
     deadline = time.monotonic() + seconds
     while not footer.children and time.monotonic() < deadline:
         await pilot.pause(0.05)

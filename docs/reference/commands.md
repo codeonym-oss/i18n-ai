@@ -13,7 +13,7 @@ A full-screen form for a generation: the tree, its targets and where they go, th
 model and key. `Ctrl+R` plans it: each file in each locale, a cell, a row or a column of which
 turns off (`Space`, `r`, `c`). `Ctrl+R` again runs it, each cell live, retries included, then
 shows its receipt and the `generate` command that repeats it; `b` goes back, `q` quits, `Ctrl+P`
-opens the command palette. See [Getting started](../guide/getting-started.md).
+opens the palette (`>` commands, `@` locales, `#` files). See [Getting started](../guide/getting-started.md).
 
 ## `i18n-ai scan [PATH]`
 

@@ -191,3 +191,17 @@ async def test_review(
 ) -> None:
     await fallen(isolated, gateway, "app.welcome", "cart.total")
     await snap(tui(isolated), size, to_review)
+
+
+async def to_palette(pilot: Pilot[None]) -> None:
+    """The palette on Home, searching for "o"."""
+    await settle(pilot)
+    await pilot.press("ctrl+p")
+    await settle(pilot)
+    await pilot.press("o")
+    await settle(pilot)
+
+
+@pytest.mark.parametrize("size", SIZES, ids=["160x45", "80x24"])
+async def test_palette(isolated: Path, snap: Snap, size: tuple[int, int]) -> None:
+    await snap(tui(isolated), size, to_palette)
